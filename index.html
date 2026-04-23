@@ -280,6 +280,71 @@ window.renderAnual = function(){
   </tr>`;
 }
 
+
+// ========== ALERTA SEMANAL EMAIL ==========
+const EMAILJS_SERVICE  = 'service_ayh8da2';
+const EMAILJS_TEMPLATE = 'template_qkzi1jl';
+
+function verificarAlertaSemanal(){
+  // Calcular semana actual (lunes-domingo)
+  const hoy = new Date();
+  const diaSemana = hoy.getDay(); // 0=dom,1=lun,...,6=sab
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - (diaSemana===0 ? 6 : diaSemana-1));
+  lunes.setHours(0,0,0,0);
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate()+6);
+  domingo.setHours(23,59,59,999);
+
+  const ingSemana = filterByRange(ingresos, lunes, domingo);
+  const egSemana  = filterByRange(egresos,  lunes, domingo);
+  const totalIng  = sumMonto(ingSemana);
+  const totalEg   = sumMonto(egSemana);
+  const ganancia  = totalIng - totalEg;
+
+  const banner = document.getElementById('alertaSemanalBanner');
+  const detalle = document.getElementById('alertaSemanalDetalle');
+
+  if(ganancia < 0){
+    banner.style.display = 'flex';
+    const fmtFecha = d => d.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+    detalle.textContent = `Semana ${fmtFecha(lunes)} – ${fmtFecha(domingo)} · Ingresos: ${fmt(totalIng)} · Egresos: ${fmt(totalEg)} · Ganancia: ${fmt(ganancia)}`;
+    // Guardar datos para el email
+    window._alertaData = {
+      semana: `${fmtFecha(lunes)} – ${fmtFecha(domingo)}`,
+      ingresos: fmt(totalIng),
+      egresos: fmt(totalEg),
+      ganancia: fmt(ganancia)
+    };
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+window.enviarAlertaEmail = async function(){
+  if(!window._alertaData){ alert('No hay datos de alerta.'); return; }
+  try{
+    // Enviar a ambos correos
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      semana:   window._alertaData.semana,
+      ingresos: window._alertaData.ingresos,
+      egresos:  window._alertaData.egresos,
+      ganancia: window._alertaData.ganancia,
+      email:    'joseantok56@gmail.com'
+    });
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      semana:   window._alertaData.semana,
+      ingresos: window._alertaData.ingresos,
+      egresos:  window._alertaData.egresos,
+      ganancia: window._alertaData.ganancia,
+      email:    'anaaquino1004@gmail.com'
+    });
+    alert('✅ Alerta enviada a ambos correos');
+  } catch(e){
+    alert('❌ Error al enviar: ' + e.text);
+  }
+}
+
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap');
@@ -437,6 +502,7 @@ tr:hover td{background:rgba(212,134,10,0.05)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--amber);letter-spacing:2px}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body>
 
@@ -506,6 +572,13 @@ tr:hover td{background:rgba(212,134,10,0.05)}
   <!-- DASHBOARD -->
   <div class="section active" id="section-dashboard">
     <div class="kpi-grid" id="kpiGrid"></div>
+    <div id="alertaSemanalBanner" style="display:none;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.4);border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--red);letter-spacing:1px">📉 ALERTA: GANANCIA SEMANAL EN ROJO</span>
+        <div id="alertaSemanalDetalle" style="font-size:0.8rem;color:rgba(253,243,227,0.6);margin-top:2px"></div>
+      </div>
+      <button class="btn btn-sm" style="background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:var(--red)" onclick="enviarAlertaEmail()">📧 Enviar Alerta por Email</button>
+    </div>
     <div class="grid-2 mb-4">
       <div class="card">
         <div class="card-title">📈 Ingresos vs Egresos (últimos 14 días)</div>
@@ -783,6 +856,8 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+  // Init EmailJS
+  if(window.emailjs) emailjs.init('eQWIyumvMtbhhnSzA');
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -1106,6 +1181,7 @@ function renderDashboard(){
   const fI=sumMonto(ing_m.filter(x=>x.tipo_dia==='festivo'));
   const tc2=Object.entries(groupBy(ing_m,'cat')).sort((a,b)=>b[1]-a[1])[0];
   const tg=Object.entries(groupBy(eg_m,'cat')).sort((a,b)=>b[1]-a[1])[0];
+  verificarAlertaSemanal();
   document.getElementById('resumenRapido').innerHTML=`
     <div class="prog-wrap"><div class="prog-label"><span>🎸 Noches Show</span><span>${fmt(sI)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiM>0?Math.min(100,sI/tiM*100):0}%;background:linear-gradient(90deg,#E74C3C,#F5A623)"></div></div></div>
     <div class="prog-wrap"><div class="prog-label"><span>📅 Días Normales</span><span>${fmt(nI)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiM>0?Math.min(100,nI/tiM*100):0}%;background:linear-gradient(90deg,#3498DB,#2ECC71)"></div></div></div>
@@ -1534,6 +1610,71 @@ window.renderAnual = function(){
     <td style="font-weight:800">${totalIng>0?(totalGan/totalIng*100).toFixed(1)+'%':'—'}</td>
     <td></td>
   </tr>`;
+}
+
+
+// ========== ALERTA SEMANAL EMAIL ==========
+const EMAILJS_SERVICE  = 'service_ayh8da2';
+const EMAILJS_TEMPLATE = 'template_qkzi1jl';
+
+function verificarAlertaSemanal(){
+  // Calcular semana actual (lunes-domingo)
+  const hoy = new Date();
+  const diaSemana = hoy.getDay(); // 0=dom,1=lun,...,6=sab
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - (diaSemana===0 ? 6 : diaSemana-1));
+  lunes.setHours(0,0,0,0);
+  const domingo = new Date(lunes);
+  domingo.setDate(lunes.getDate()+6);
+  domingo.setHours(23,59,59,999);
+
+  const ingSemana = filterByRange(ingresos, lunes, domingo);
+  const egSemana  = filterByRange(egresos,  lunes, domingo);
+  const totalIng  = sumMonto(ingSemana);
+  const totalEg   = sumMonto(egSemana);
+  const ganancia  = totalIng - totalEg;
+
+  const banner = document.getElementById('alertaSemanalBanner');
+  const detalle = document.getElementById('alertaSemanalDetalle');
+
+  if(ganancia < 0){
+    banner.style.display = 'flex';
+    const fmtFecha = d => d.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+    detalle.textContent = `Semana ${fmtFecha(lunes)} – ${fmtFecha(domingo)} · Ingresos: ${fmt(totalIng)} · Egresos: ${fmt(totalEg)} · Ganancia: ${fmt(ganancia)}`;
+    // Guardar datos para el email
+    window._alertaData = {
+      semana: `${fmtFecha(lunes)} – ${fmtFecha(domingo)}`,
+      ingresos: fmt(totalIng),
+      egresos: fmt(totalEg),
+      ganancia: fmt(ganancia)
+    };
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+window.enviarAlertaEmail = async function(){
+  if(!window._alertaData){ alert('No hay datos de alerta.'); return; }
+  try{
+    // Enviar a ambos correos
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      semana:   window._alertaData.semana,
+      ingresos: window._alertaData.ingresos,
+      egresos:  window._alertaData.egresos,
+      ganancia: window._alertaData.ganancia,
+      email:    'joseantok56@gmail.com'
+    });
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      semana:   window._alertaData.semana,
+      ingresos: window._alertaData.ingresos,
+      egresos:  window._alertaData.egresos,
+      ganancia: window._alertaData.ganancia,
+      email:    'anaaquino1004@gmail.com'
+    });
+    alert('✅ Alerta enviada a ambos correos');
+  } catch(e){
+    alert('❌ Error al enviar: ' + e.text);
+  }
 }
 
 </script>
