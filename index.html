@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<!-- saved from url=(0042)file:///C:/Users/USER/Downloads/index.html -->
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Casa Barril · Sistema Financiero</title>
+<script src="./index_files/chart.umd.min.js.descarga">
+// ========== MODAL EDITAR ==========
+let editando = {tipo:null, id:null};
+
+window.abrirModal = function(tipo, id){
+  const arr = tipo==='ingreso' ? ingresos : egresos;
+  const reg = arr.find(x=>x.id===id);
+  if(!reg) return;
+  editando = {tipo, id};
+  document.getElementById('modalTitulo').textContent = tipo==='ingreso' ? '✏️ Editar Ingreso' : '✏️ Editar Egreso';
+  
+  if(tipo==='ingreso'){
+    document.getElementById('modalContenido').innerHTML = `
+      <div class="form-row">
+        <div class="form-group"><label>Fecha</label><input type="date" id="edit_fecha" value="${reg.fecha||''}"></div>
+        <div class="form-group"><label>Hora</label><input type="time" id="edit_hora" value="${reg.hora||''}"></div>
+        <div class="form-group"><label>Tipo de Día</label>
+          <select id="edit_tipo_dia">
+            <option value="normal" ${reg.tipo_dia==='normal'?'selected':''}>Martes–Jueves (normal)</option>
+            <option value="show" ${reg.tipo_dia==='show'?'selected':''}>Viernes/Sábado (SHOW 🎸)</option>
+            <option value="festivo" ${reg.tipo_dia==='festivo'?'selected':''}>Día Festivo 🎉</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Categoría</label>
+          <select id="edit_cat">
+            <option value="cerveza_chop" ${reg.cat==='cerveza_chop'?'selected':''}>🍺 Cerveza Artesanal – Chop</option>
+            <option value="cerveza_botella" ${reg.cat==='cerveza_botella'?'selected':''}>🍺 Cerveza Artesanal – Botella</option>
+            <option value="cerveza_clasica" ${reg.cat==='cerveza_clasica'?'selected':''}>🍻 Cerveza Clásica</option>
+            <option value="tragos" ${reg.cat==='tragos'?'selected':''}>🍹 Tragos</option>
+            <option value="comida" ${reg.cat==='comida'?'selected':''}>🍔 Comidas</option>
+            <option value="snacks" ${reg.cat==='snacks'?'selected':''}>🍬 Snacks</option>
+            <option value="vinos" ${reg.cat==='vinos'?'selected':''}>🍷 Vinos</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Monto (S/.)</label><input type="number" id="edit_monto" value="${reg.monto||0}" step="0.01" min="0"></div>
+        <div class="form-group"><label>Método de Pago</label>
+          <select id="edit_pago">
+            <option value="efectivo" ${reg.pago==='efectivo'?'selected':''}>💵 Efectivo</option>
+            <option value="tarjeta" ${reg.pago==='tarjeta'?'selected':''}>💳 Tarjeta</option>
+            <option value="yape" ${reg.pago==='yape'?'selected':''}>📱 Yape</option>
+            <option value="plin" ${reg.pago==='plin'?'selected':''}>📱 Plin</option>
+            <option value="transferencia" ${reg.pago==='transferencia'?'selected':''}>🏦 Transferencia</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>N° Boleta / Factura</label><input type="text" id="edit_comprobante" value="${reg.comprobante||''}"></div>
+        <div class="form-group" style="grid-column:2/-1"><label>Descripción</label><textarea id="edit_desc">${reg.desc||''}</textarea></div>
+      </div>`;
+  } else {
+    document.getElementById('modalContenido').innerHTML = `
+      <div class="form-row">
+        <div class="form-group"><label>Fecha</label><input type="date" id="edit_fecha" value="${reg.fecha||''}"></div>
+        <div class="form-group"><label>Categoría</label>
+          <select id="edit_cat">
+            <option value="insumos_bebidas" ${reg.cat==='insumos_bebidas'?'selected':''}>🍺 Insumos Bebidas</option>
+            <option value="insumos_comida" ${reg.cat==='insumos_comida'?'selected':''}>🥩 Insumos Alimentos</option>
+            <option value="personal" ${reg.cat==='personal'?'selected':''}>👥 Personal</option>
+            <option value="show_artistas" ${reg.cat==='show_artistas'?'selected':''}>🎸 Artistas/Shows</option>
+            <option value="alquiler" ${reg.cat==='alquiler'?'selected':''}>🏠 Alquiler</option>
+            <option value="servicios" ${reg.cat==='servicios'?'selected':''}>💡 Servicios</option>
+            <option value="mantenimiento" ${reg.cat==='mantenimiento'?'selected':''}>🔧 Mantenimiento</option>
+            <option value="marketing" ${reg.cat==='marketing'?'selected':''}>📣 Marketing</option>
+            <option value="impuestos" ${reg.cat==='impuestos'?'selected':''}>📝 Impuestos</option>
+            <option value="otros" ${reg.cat==='otros'?'selected':''}>📦 Otros</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Monto (S/.)</label><input type="number" id="edit_monto" value="${reg.monto||0}" step="0.01" min="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Método de Pago</label>
+          <select id="edit_pago">
+            <option value="efectivo" ${reg.pago==='efectivo'?'selected':''}>💵 Efectivo</option>
+            <option value="tarjeta" ${reg.pago==='tarjeta'?'selected':''}>💳 Tarjeta</option>
+            <option value="transferencia" ${reg.pago==='transferencia'?'selected':''}>🏦 Transferencia</option>
+            <option value="yape" ${reg.pago==='yape'?'selected':''}>📱 Yape</option>
+            <option value="plin" ${reg.pago==='plin'?'selected':''}>📱 Plin</option>
+          </select>
+        </div>
+        <div class="form-group"><label>N° Boleta / Factura</label><input type="text" id="edit_comprobante" value="${reg.comprobante||''}"></div>
+        <div class="form-group"><label>Descripción</label><input type="text" id="edit_desc" value="${reg.desc||''}"></div>
+      </div>`;
+  }
+  document.getElementById('modalOverlay').style.display='flex';
+}
+
+window.cerrarModal = function(){
+  document.getElementById('modalOverlay').style.display='none';
+  editando={tipo:null,id:null};
+}
+
+window.guardarEdicion = async function(){
+  const {tipo, id} = editando;
+  if(!tipo||!id) return;
+  const fecha = document.getElementById('edit_fecha').value;
+  const monto = parseFloat(document.getElementById('edit_monto').value);
+  const cat = document.getElementById('edit_cat').value;
+  const pago = document.getElementById('edit_pago').value;
+  const comprobante = document.getElementById('edit_comprobante').value.trim();
+  const desc = document.getElementById('edit_desc').value.trim();
+  if(!fecha||isNaN(monto)||monto<=0){showAlert('alertModal','error','⚠️ Completa fecha y monto válido');return}
+  
+  try{
+    const col = tipo==='ingreso' ? 'ingresos' : 'egresos';
+    const data = {fecha, monto, cat, pago, comprobante, desc};
+    if(tipo==='ingreso'){
+      data.hora = document.getElementById('edit_hora').value;
+      data.tipo_dia = document.getElementById('edit_tipo_dia').value;
+    }
+    const {updateDoc} = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    await updateDoc(doc(db, col, id), data);
+    showAlert('alertModal','success','✅ Registro actualizado');
+    setTimeout(()=>cerrarModal(), 1500);
+  }catch(e){
+    showAlert('alertModal','error','❌ Error: '+e.message);
+  }
+}
+
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap');
+:root{--amber:#D4860A;--amber-light:#F5A623;--amber-dark:#A0620A;--cream:#FDF3E3;--brown:#111111;--dark:#000000;--green:#2ECC71;--red:#E74C3C;--blue:#3498DB;--purple:#9B59B6;--glass:rgba(255,255,255,0.06);--border:rgba(212,134,10,0.25)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000000;color:var(--cream);font-family:'Nunito',sans-serif;min-height:100vh;background-image:radial-gradient(ellipse at 10% 10%,rgba(212,134,10,0.06) 0%,transparent 50%),radial-gradient(ellipse at 90% 80%,rgba(212,134,10,0.04) 0%,transparent 50%)}
+
+/* AUTH */
+#authScreen{position:fixed;inset:0;background:#000000;display:flex;align-items:center;justify-content:center;z-index:1000;background-image:radial-gradient(ellipse at 30% 30%,rgba(212,134,10,0.12) 0%,transparent 60%)}
+.auth-box{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:20px;padding:40px 36px;width:100%;max-width:400px;text-align:center}
+.auth-logo{width:120px;margin:0 auto 20px;display:block}
+.auth-box h2{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--amber-light);letter-spacing:2px;margin-bottom:4px}
+.auth-box p{font-size:0.8rem;color:rgba(253,243,227,0.45);margin-bottom:28px;text-transform:uppercase;letter-spacing:2px}
+.auth-field{margin-bottom:14px;text-align:left}
+.auth-field label{display:block;font-size:0.72rem;color:rgba(253,243,227,0.55);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.auth-field input{width:100%;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:9px;color:var(--cream);font-family:'Nunito',sans-serif;font-size:0.95rem;padding:10px 14px;outline:none;transition:border-color .2s}
+.auth-field input:focus{border-color:var(--amber)}
+.auth-btn{width:100%;padding:12px;border-radius:10px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;background:linear-gradient(135deg,var(--amber-dark),var(--amber));color:var(--dark);margin-top:8px;transition:all .2s}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,134,10,0.35)}
+.auth-err{color:var(--red);font-size:0.82rem;margin-top:10px;display:none}
+.auth-role-badge{margin-top:16px;padding:8px 14px;border-radius:8px;background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:var(--green);font-size:0.78rem;font-weight:700;display:none}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1a1a1a 0%,#000000 100%);border-bottom:2px solid var(--amber);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 4px 30px rgba(212,134,10,0.2)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-img{height:48px;width:auto}
+.logo-text h1{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--amber-light);letter-spacing:2px;line-height:1}
+.logo-text span{font-size:0.68rem;color:rgba(253,243,227,0.45);text-transform:uppercase;letter-spacing:3px}
+.header-right{display:flex;align-items:center;gap:14px}
+.user-badge{background:rgba(212,134,10,0.15);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:0.78rem;color:var(--amber-light);font-weight:700}
+.role-badge{font-size:0.68rem;padding:3px 8px;border-radius:6px;font-weight:800;text-transform:uppercase}
+.role-admin{background:rgba(231,76,60,0.15);color:var(--red);border:1px solid rgba(231,76,60,0.3)}
+.role-worker{background:rgba(46,204,113,0.12);color:var(--green);border:1px solid rgba(46,204,113,0.25)}
+.logout-btn{background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);color:var(--red);padding:5px 12px;border-radius:8px;cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:700}
+.header-date{text-align:right}
+.date-big{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--amber)}
+.date-small{font-size:0.7rem;color:rgba(253,243,227,0.45)}
+
+/* SYNC STATUS */
+.sync-bar{background:rgba(52,152,219,0.1);border-bottom:1px solid rgba(52,152,219,0.2);padding:4px 24px;font-size:0.72rem;color:rgba(52,152,219,0.8);display:flex;align-items:center;gap:8px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#3498DB;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* NAV */
+.nav-tabs{display:flex;gap:4px;padding:10px 24px 0;border-bottom:1px solid var(--border);overflow-x:auto}
+.nav-tab{padding:9px 18px;border-radius:8px 8px 0 0;background:var(--glass);border:1px solid var(--border);border-bottom:none;color:rgba(253,243,227,0.6);font-size:0.85rem;font-weight:700;cursor:pointer;transition:all .2s;white-space:nowrap;font-family:'Nunito',sans-serif}
+.nav-tab:hover{background:rgba(212,134,10,0.15);color:var(--amber-light)}
+.nav-tab.active{background:rgba(212,134,10,0.2);color:var(--amber-light);border-color:var(--amber)}
+.nav-tab.admin-only{border-color:rgba(231,76,60,0.3)}
+
+/* SECTIONS */
+.section{display:none;padding:22px 24px;animation:fadeIn .3s ease}
+.section.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARDS */
+.card{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:20px;backdrop-filter:blur(10px)}
+.card-title{font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1.5px;color:var(--amber);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:16px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(212,134,10,0.15)}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--amber-dark),var(--amber-light))}
+.kpi-label{font-size:0.7rem;color:rgba(253,243,227,0.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.kpi-value{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;color:var(--cream);line-height:1}
+.kpi-value.green{color:var(--green)}.kpi-value.red{color:var(--red)}.kpi-value.amber{color:var(--amber-light)}
+.kpi-sub{font-size:0.7rem;margin-top:3px;color:rgba(253,243,227,0.4)}
+.kpi-icon{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:2rem;opacity:0.1}
+
+/* GRIDS */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* FORMS */
+.form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+label{font-size:0.73rem;color:rgba(253,243,227,0.6);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+input,select,textarea{background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:8px;color:var(--cream);font-family:'Nunito',sans-serif;font-size:0.9rem;padding:9px 12px;transition:border-color .2s;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--amber);background:rgba(212,134,10,0.1)}
+select option{background:var(--brown);color:var(--cream)}
+textarea{resize:vertical;min-height:55px}
+.btn{padding:10px 20px;border-radius:9px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:0.85rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;transition:all .2s}
+.btn-primary{background:linear-gradient(135deg,var(--amber-dark),var(--amber));color:var(--dark)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(212,134,10,0.35)}
+.btn-danger{background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:var(--red)}
+.btn-danger:hover{background:rgba(231,76,60,0.35)}
+.btn-sm{padding:5px 12px;font-size:0.75rem}
+
+/* TABLE */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:0.83rem}
+th{background:rgba(212,134,10,0.15);color:var(--amber);text-transform:uppercase;font-size:0.7rem;letter-spacing:1px;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid rgba(212,134,10,0.07);color:rgba(253,243,227,0.85)}
+tr:hover td{background:rgba(212,134,10,0.05)}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700}
+.badge-green{background:rgba(46,204,113,0.15);color:var(--green);border:1px solid rgba(46,204,113,0.3)}
+.badge-red{background:rgba(231,76,60,0.15);color:var(--red);border:1px solid rgba(231,76,60,0.3)}
+.badge-blue{background:rgba(52,152,219,0.15);color:var(--blue);border:1px solid rgba(52,152,219,0.3)}
+.badge-purple{background:rgba(155,89,182,0.15);color:var(--purple);border:1px solid rgba(155,89,182,0.3)}
+.badge-amber{background:rgba(212,134,10,0.15);color:var(--amber-light);border:1px solid rgba(212,134,10,0.3)}
+
+/* CHARTS */
+.chart-box{position:relative;height:250px}
+
+/* MISC */
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--amber-light);letter-spacing:2px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.sep{height:1px;background:var(--border);margin:16px 0}
+.mb-4{margin-bottom:16px}
+.mt-4{margin-top:16px}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.prog-wrap{margin:5px 0}
+.prog-label{display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:3px;color:rgba(253,243,227,0.7)}
+.prog-bar{height:7px;background:rgba(255,255,255,0.07);border-radius:10px;overflow:hidden}
+.prog-fill{height:100%;border-radius:10px;transition:width .8s ease}
+.alert{padding:10px 14px;border-radius:9px;font-size:0.83rem;margin-bottom:12px;display:none}
+.alert.show{display:block}
+.alert-success{background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);color:var(--green)}
+.alert-error{background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);color:var(--red)}
+.empty{text-align:center;padding:36px;color:rgba(253,243,227,0.35)}
+.empty-icon{font-size:2.5rem;margin-bottom:8px}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:flex-end}
+.filter-bar .form-group{min-width:130px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--amber-dark);border-radius:3px}
+.tip{font-size:0.73rem;color:rgba(253,243,227,0.4);margin-top:4px}
+
+
+
+/* ITEMS BOLETA */
+.item-row{display:grid;grid-template-columns:1fr 130px 36px;gap:8px;align-items:center;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:8px}
+.item-row select,.item-row input{background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:7px;color:var(--cream);font-family:'Nunito',sans-serif;font-size:0.85rem;padding:7px 10px;outline:none;width:100%}
+.item-row select:focus,.item-row input:focus{border-color:var(--amber)}
+.item-del{background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.3);color:var(--red);border-radius:7px;width:32px;height:32px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center}
+
+/* MODAL EDITAR */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:#111;border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--amber-light);letter-spacing:2px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:rgba(231,76,60,0.2);border:1px solid rgba(231,76,60,0.4);color:var(--red);border-radius:8px;padding:4px 12px;cursor:pointer;font-size:1rem;font-family:'Nunito',sans-serif;font-weight:700}
+
+/* ADMIN PANEL */
+.user-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.user-info{display:flex;flex-direction:column;gap:2px}
+.user-name{font-weight:700;font-size:0.9rem}
+.user-email{font-size:0.75rem;color:rgba(253,243,227,0.5)}
+.user-actions{display:flex;gap:8px;align-items:center}
+
+/* LOADING */
+#loadingOverlay{position:fixed;inset:0;background:#000000;display:flex;align-items:center;justify-content:center;z-index:2000;flex-direction:column;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid rgba(212,134,10,0.2);border-top-color:var(--amber);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--amber);letter-spacing:2px}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadingOverlay" style="display: none;">
+  <img src="./index_files/Whats-App-Image-2026-04-20-at-12-16-10-PM.jpg" style="height:80px;width:auto;margin-bottom:8px" alt="Logo">
+  <div class="spinner"></div>
+  <div class="loading-text">Cargando...</div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div id="authScreen" style="display:none">
+  <div class="auth-box">
+    <img src="./index_files/Whats-App-Image-2026-04-20-at-12-16-10-PM.jpg" class="auth-logo" alt="Casa Barril">
+    <h2>Casa Barril</h2>
+    <p>Sistema Financiero</p>
+    <div class="auth-field">
+      <label>Correo Electrónico</label>
+      <input type="email" id="authEmail" placeholder="tu@correo.com">
+    </div>
+    <div class="auth-field">
+      <label>Contraseña</label>
+      <input type="password" id="authPass" placeholder="••••••••" onkeydown="if(event.key===&#39;Enter&#39;)doLogin()">
+    </div>
+    <button class="auth-btn" onclick="doLogin()">🔐 Ingresar</button>
+    <div class="auth-err" id="authErr"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display: block;">
+  <header class="header">
+    <div class="logo">
+      <img src="./index_files/Whats-App-Image-2026-04-20-at-12-16-10-PM.jpg" class="logo-img" alt="Casa Barril">
+      <div class="logo-text">
+        <h1>Casa Barril</h1>
+        <span>Restobar · Sistema Financiero</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div style="text-align:right">
+        <div class="date-big" id="headerDate">Miércoles, 22 Abr 2026</div>
+        <div class="date-small" id="headerTime">06:35:12 p.&nbsp;m.</div>
+      </div>
+      <div>
+        <div class="user-badge" id="userBadge">joseantok56</div>
+        <div style="text-align:center;margin-top:4px"><span class="role-badge role-admin" id="roleBadge">👑 Admin</span></div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">⬆ Salir</button>
+    </div>
+  </header>
+
+  <div class="sync-bar">
+    <div class="sync-dot"></div>
+    <span>🔥 Conectado a Firebase · Datos en tiempo real · <span id="syncStatus">Sincronizado ✓ 6:34:59 p.&nbsp;m.</span></span>
+  </div>
+
+  <nav class="nav-tabs" id="navTabs">
+    <div class="nav-tab active" onclick="showSection(&#39;dashboard&#39;,this)">📊 Dashboard</div>
+    <div class="nav-tab" onclick="showSection(&#39;ingresos&#39;,this)">💰 Registrar Ingreso</div>
+    <div class="nav-tab" onclick="showSection(&#39;egresos&#39;,this)">📤 Registrar Egreso</div>
+    <div class="nav-tab" onclick="showSection(&#39;historial&#39;,this)">📋 Historial</div>
+    <div class="nav-tab admin-only" id="tabReportes" onclick="showSection(&#39;reportes&#39;,this)" style="display: block;">📈 Reportes</div>
+    <div class="nav-tab admin-only" id="tabAdmin" onclick="showSection(&#39;admin&#39;,this)" style="display: block;">⚙️ Admin</div>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <div class="section active" id="section-dashboard">
+    <div class="kpi-grid" id="kpiGrid"><div class="kpi-card"><div class="kpi-label">Ingresos Hoy</div><div class="kpi-value amber">S/ 0.00</div><div class="kpi-sub">0 trans.</div><div class="kpi-icon">💰</div></div><div class="kpi-card"><div class="kpi-label">Egresos Hoy</div><div class="kpi-value red">S/ 0.00</div><div class="kpi-sub">0 reg.</div><div class="kpi-icon">📤</div></div><div class="kpi-card"><div class="kpi-label">Ganancia Hoy</div><div class="kpi-value green">S/ 0.00</div><div class="kpi-sub">✅ Positivo</div><div class="kpi-icon">💹</div></div><div class="kpi-card"><div class="kpi-label">Ingresos Mes</div><div class="kpi-value amber">S/ 170.00</div><div class="kpi-sub">7 trans.</div><div class="kpi-icon">📅</div></div><div class="kpi-card"><div class="kpi-label">Egresos Mes</div><div class="kpi-value red">S/ 1,046.00</div><div class="kpi-sub"></div><div class="kpi-icon">📤</div></div><div class="kpi-card"><div class="kpi-label">Ganancia Mes</div><div class="kpi-value red">S/ -876.00</div><div class="kpi-sub">Margen: -515.3%</div><div class="kpi-icon">🏆</div></div><div class="kpi-card"><div class="kpi-label">Ingresos Semana</div><div class="kpi-value amber">S/ 170.00</div><div class="kpi-sub">7 días</div><div class="kpi-icon">📈</div></div><div class="kpi-card"><div class="kpi-label">Total Registros</div><div class="kpi-value ">15</div><div class="kpi-sub">7 ing. / 8 eg.</div><div class="kpi-icon">📋</div></div></div>
+    <div class="grid-2 mb-4">
+      <div class="card">
+        <div class="card-title">📈 Ingresos vs Egresos (últimos 14 días)</div>
+        <div class="chart-box"><canvas id="chartLine" style="box-sizing: border-box; display: block; height: 250px; width: 601px;" width="752" height="312"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🍺 Ingresos por Categoría (mes)</div>
+        <div class="chart-box"><canvas id="chartDoughnut" style="box-sizing: border-box; display: block; height: 250px; width: 601px;" width="752" height="312"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-2 mb-4">
+      <div class="card">
+        <div class="card-title">💳 Ventas por Método de Pago (mes)</div>
+        <div class="chart-box"><canvas id="chartPagos" style="box-sizing: border-box; display: block; height: 250px; width: 601px;" width="752" height="312"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 Egresos por Categoría (mes)</div>
+        <div class="chart-box"><canvas id="chartEgresos" style="box-sizing: border-box; display: block; height: 250px; width: 601px;" width="752" height="312"></canvas></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">📅 Ventas Diarias del Mes</div>
+        <div class="chart-box"><canvas id="chartDias" style="box-sizing: border-box; display: block; height: 250px; width: 601px;" width="752" height="312"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔥 Resumen Rápido</div>
+        <div id="resumenRapido">
+    <div class="prog-wrap"><div class="prog-label"><span>🎸 Noches Show</span><span>S/ 0.00</span></div><div class="prog-bar"><div class="prog-fill" style="width:0%;background:linear-gradient(90deg,#E74C3C,#F5A623)"></div></div></div>
+    <div class="prog-wrap"><div class="prog-label"><span>📅 Días Normales</span><span>S/ 170.00</span></div><div class="prog-bar"><div class="prog-fill" style="width:100%;background:linear-gradient(90deg,#3498DB,#2ECC71)"></div></div></div>
+    <div class="prog-wrap"><div class="prog-label"><span>🎉 Festivos</span><span>S/ 0.00</span></div><div class="prog-bar"><div class="prog-fill" style="width:0%;background:linear-gradient(90deg,#9B59B6,#3498DB)"></div></div></div>
+    <div class="sep"></div>
+    <div style="font-size:0.8rem;color:rgba(253,243,227,0.6);line-height:2">
+      🏆 <strong style="color:var(--amber-light)">Mayor ingreso:</strong> 🍔 Comidas → S/ 124.00
+      <br>⚠️ <strong style="color:var(--red)">Mayor gasto:</strong> 🍺 Insumos Bebidas → S/ 611.00
+    </div>
+    <div class="sep"></div>
+    <div style="text-align:center">
+      <div style="font-size:0.68rem;color:rgba(253,243,227,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Margen del Mes</div>
+      <div style="font-family:&#39;Bebas Neue&#39;,sans-serif;font-size:2.2rem;color:var(--red)">
+        -515.3%
+      </div>
+    </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INGRESOS -->
+  <div class="section" id="section-ingresos">
+    <div class="section-title">💰 Registrar Ingreso</div>
+    <div class="card" style="max-width:780px">
+      <div id="alertIngreso" class="alert alert-success"></div>
+
+      <!-- DATOS GENERALES DE LA BOLETA -->
+      <div style="background:rgba(212,134,10,0.08);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px">
+        <div style="font-family:&#39;Bebas Neue&#39;,sans-serif;color:var(--amber);letter-spacing:1.5px;margin-bottom:10px;font-size:0.95rem">📋 DATOS DE LA BOLETA</div>
+        <div class="form-row">
+          <div class="form-group"><label>Fecha</label><input type="date" id="ing_fecha"></div>
+          <div class="form-group"><label>Hora</label><input type="time" id="ing_hora"></div>
+          <div class="form-group"><label>N° Boleta / Factura</label><input type="text" id="ing_comprobante" placeholder="Ej: B001-0045"></div>
+          <div class="form-group"><label>Tipo de Día</label>
+            <select id="ing_tipo_dia">
+              <option value="normal">Martes–Jueves (normal)</option>
+              <option value="show">Viernes/Sábado (SHOW 🎸)</option>
+              <option value="festivo">Día Festivo 🎉</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Método de Pago</label>
+            <select id="ing_pago">
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="tarjeta">💳 Tarjeta</option>
+              <option value="yape">📱 Yape</option>
+              <option value="plin">📱 Plin</option>
+              <option value="transferencia">🏦 Transferencia</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ITEMS DE LA BOLETA -->
+      <div style="font-family:&#39;Bebas Neue&#39;,sans-serif;color:var(--amber);letter-spacing:1.5px;margin-bottom:10px;font-size:0.95rem">🛒 PRODUCTOS / CATEGORÍAS</div>
+      <div id="ing_items_container">
+        <!-- Items se generan dinámicamente -->
+      <div class="item-row" id="item_1">
+    <select id="item_1_cat" onchange="recalcularTotal()">
+      <option value="cerveza_chop">🍺 Cerveza Artesanal – Chop</option>
+      <option value="cerveza_botella">🍺 Cerveza Artesanal – Botella</option>
+      <option value="cerveza_clasica">🍻 Cerveza Clásica</option>
+      <option value="tragos">🍹 Tragos</option>
+      <option value="comida">🍔 Comidas</option>
+      <option value="snacks">🍬 Snacks</option>
+      <option value="vinos">🍷 Vinos</option>
+    </select>
+    <input type="number" id="item_1_monto" placeholder="S/ 0.00" step="0.01" min="0" oninput="recalcularTotal()">
+    <button class="item-del" onclick="eliminarItem(&#39;item_1&#39;)">✖</button></div></div>
+      <button class="btn btn-sm mt-4" style="background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.3);color:var(--green)" onclick="agregarItem()">➕ Agregar Categoría</button>
+
+      <!-- TOTAL -->
+      <div style="background:rgba(212,134,10,0.1);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:&#39;Bebas Neue&#39;,sans-serif;color:var(--amber);letter-spacing:1px;font-size:1rem">TOTAL BOLETA</span>
+        <span style="font-family:&#39;Bebas Neue&#39;,sans-serif;color:var(--green);font-size:1.8rem" id="ing_total">S/ 0.00</span>
+      </div>
+
+      <div class="form-row mt-4">
+        <div class="form-group" style="grid-column:1/-1"><label>Descripción / Nota (opcional)</label><textarea id="ing_desc" placeholder="Ej: Mesa 4 – cumpleaños"></textarea></div>
+      </div>
+
+      <button class="btn btn-primary mt-4" onclick="registrarIngreso()">💾 Guardar Boleta Completa</button>
+      <p class="tip mt-4">✅ Puedes agregar varias categorías en una sola boleta. El total se calcula automáticamente.</p>
+    </div>
+  </div>
+
+  <!-- EGRESOS -->
+  <div class="section" id="section-egresos">
+    <div class="section-title">📤 Registrar Egreso</div>
+    <div class="card" style="max-width:700px">
+      <div id="alertEgreso" class="alert alert-success"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Fecha</label><input type="date" id="eg_fecha"></div>
+        <div class="form-group"><label>Categoría</label>
+          <select id="eg_cat">
+            <option value="insumos_bebidas">🍺 Insumos – Bebidas / Licores</option>
+            <option value="insumos_comida">🥩 Insumos – Alimentos</option>
+            <option value="personal">👥 Personal / Sueldos</option>
+            <option value="show_artistas">🎸 Artistas / Shows en Vivo</option>
+            <option value="alquiler">🏠 Alquiler / Local</option>
+            <option value="servicios">💡 Servicios (luz, agua, internet)</option>
+            <option value="mantenimiento">🔧 Mantenimiento</option>
+            <option value="marketing">📣 Marketing / Publicidad</option>
+            <option value="impuestos">📝 Impuestos / Permisos</option>
+            <option value="otros">📦 Otros</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Monto (S/.)</label><input type="number" id="eg_monto" placeholder="0.00" step="0.01" min="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Método de Pago</label>
+          <select id="eg_pago">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="transferencia">🏦 Transferencia</option>
+            <option value="yape">📱 Yape</option>
+            <option value="plin">📱 Plin</option>
+          </select>
+        </div>
+        <div class="form-group"><label>N° Boleta / Factura</label><input type="text" id="eg_comprobante" placeholder="Ej: F001-0012"></div>
+        <div class="form-group"><label>Descripción</label><input type="text" id="eg_desc" placeholder="Ej: Compra de lúpulo y malta"></div>
+      </div>
+      <button class="btn btn-primary" onclick="registrarEgreso()">💾 Guardar Egreso</button>
+    </div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="section" id="section-historial">
+    <div class="section-title">📋 Historial de Movimientos</div>
+    <div class="card mb-4">
+      <div class="filter-bar">
+        <div class="form-group"><label>Desde</label><input type="date" id="filtro_desde"></div>
+        <div class="form-group"><label>Hasta</label><input type="date" id="filtro_hasta"></div>
+        <div class="form-group"><label>Tipo</label>
+          <select id="filtro_tipo"><option value="todos">Todos</option><option value="ingreso">Solo Ingresos</option><option value="egreso">Solo Egresos</option></select>
+        </div>
+        <div class="form-group"><label>Búsqueda</label><input type="text" id="filtro_busca" placeholder="Categoría, descripción…"></div>
+        <button class="btn btn-primary btn-sm" onclick="renderHistorial()">🔍 Filtrar</button>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,0.07);border:1px solid var(--border);color:var(--cream)" onclick="limpiarFiltros()">✖ Limpiar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="flex-between mb-4">
+        <span id="historialCount" style="font-size:0.8rem;color:rgba(253,243,227,0.5)"></span>
+        <button class="btn btn-primary btn-sm" onclick="exportarCSV()">⬇ Exportar CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Comprobante</th><th>Descripción</th><th>Método</th><th>Monto</th><th id="thAcciones">Acciones</th></tr></thead>
+          <tbody id="tablaHistorial"></tbody>
+        </table>
+        <div id="historialEmpty" class="empty" style="display:none"><div class="empty-icon">🔍</div><div>No hay movimientos</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORTES -->
+  <div class="section" id="section-reportes">
+    <div class="section-title">📈 Reportes y Análisis</div>
+    <div class="card mb-4">
+      <div class="filter-bar">
+        <div class="form-group"><label>Período</label>
+          <select id="rep_periodo" onchange="renderReportes()">
+            <option value="7">Últimos 7 días</option>
+            <option value="30" selected="">Últimos 30 días</option>
+            <option value="90">Últimos 90 días</option>
+            <option value="mes">Este mes</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="kpi-grid" id="kpiReportes"></div>
+    <div class="grid-2 mb-4">
+      <div class="card"><div class="card-title">📈 Curva de Ganancias Acumuladas</div><div class="chart-box"><canvas id="chartGanancias"></canvas></div></div>
+      <div class="card"><div class="card-title">📊 Ingresos Diarios</div><div class="chart-box"><canvas id="chartIngDiario"></canvas></div></div>
+    </div>
+    <div class="grid-3 mb-4">
+      <div class="card"><div class="card-title">💳 Mix de Pagos</div><div id="mixPagos"></div></div>
+      <div class="card"><div class="card-title">🍺 Top Ingresos</div><div id="topCatIng"></div></div>
+      <div class="card"><div class="card-title">📤 Top Gastos</div><div id="topCatEg"></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">🎸 Show vs Normal</div><div class="chart-box"><canvas id="chartShow"></canvas></div></div>
+      <div class="card"><div class="card-title">📅 Margen Semanal %</div><div class="chart-box"><canvas id="chartMargen"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="section" id="section-admin">
+    <div class="section-title">⚙️ Administración</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">👥 Crear Usuario</div>
+        <div id="alertAdmin" class="alert alert-success"></div>
+        <div class="form-group mb-4"><label>Correo Electrónico</label><input type="email" id="new_email" placeholder="trabajador@correo.com"></div>
+        <div class="form-group mb-4"><label>Contraseña</label><input type="password" id="new_pass" placeholder="Mínimo 6 caracteres"></div>
+        <div class="form-group mb-4"><label>Nombre</label><input type="text" id="new_name" placeholder="Nombre del trabajador"></div>
+        <div class="form-group mb-4"><label>Rol</label>
+          <select id="new_role">
+            <option value="worker">👷 Trabajador (solo registra ingresos/egresos)</option>
+            <option value="admin">👑 Administrador (acceso total)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="crearUsuario()">➕ Crear Usuario</button>
+        <p class="tip mt-4">Los trabajadores solo pueden registrar ingresos y egresos. Los administradores ven reportes y pueden eliminar registros.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">👥 Usuarios Registrados</div>
+        <div id="listaUsuarios"><div class="empty"><div class="empty-icon">👥</div>Cargando usuarios…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="modalOverlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span id="modalTitulo">✏️ Editar Registro</span>
+      <button class="modal-close" onclick="cerrarModal()">✖ Cerrar</button>
+    </div>
+    <div id="alertModal" class="alert alert-success"></div>
+    <div id="modalContenido"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-primary" onclick="guardarEdicion()">💾 Guardar Cambios</button>
+      <button class="btn" style="background:rgba(255,255,255,0.07);border:1px solid var(--border);color:var(--cream)" onclick="cerrarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- FIREBASE SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, onSnapshot, setDoc, getDoc, where } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDgwf-QpBXbiuos-IiJ_OwFDWCc0B3RH1g",
+  authDomain: "casa-barril.firebaseapp.com",
+  projectId: "casa-barril",
+  storageBucket: "casa-barril.firebasestorage.app",
+  messagingSenderId: "607978290275",
+  appId: "1:607978290275:web:4e19da4250e7f00b450c56"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ========== ESTADO GLOBAL ==========
+let currentUser = null;
+let currentRole = null;
+let ingresos = [];
+let egresos = [];
+let unsubIngresos = null;
+let unsubEgresos = null;
+
+// ========== LABELS ==========
+const CAT_ING = {
+  cerveza_chop:'🍺 Cerveza Artesanal Chop',cerveza_botella:'🍺 Cerveza Artesanal Botella',
+  cerveza_clasica:'🍻 Cerveza Clásica',tragos:'🍹 Tragos',comida:'🍔 Comidas',
+  snacks:'🍬 Snacks',vinos:'🍷 Vinos'
+};
+const CAT_EG = {
+  insumos_bebidas:'🍺 Insumos Bebidas',insumos_comida:'🥩 Insumos Alimentos',
+  personal:'👥 Personal',show_artistas:'🎸 Artistas/Shows',alquiler:'🏠 Alquiler',
+  servicios:'💡 Servicios',mantenimiento:'🔧 Mantenimiento',marketing:'📣 Marketing',
+  impuestos:'📝 Impuestos',otros:'📦 Otros'
+};
+const PAGO = {efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta',yape:'📱 Yape',plin:'📱 Plin',transferencia:'🏦 Transferencia'};
+
+// ========== HELPERS ==========
+function fmt(n){return'S/ '+Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function getToday(){return new Date().toISOString().split('T')[0]}
+function getMonthRange(){const n=new Date();return{start:new Date(n.getFullYear(),n.getMonth(),1),end:n}}
+function getDateRange(days){const e=new Date(),s=new Date();s.setDate(s.getDate()-(days-1));return{start:s,end:e}}
+function filterByRange(arr,s,e){return arr.filter(x=>{const d=new Date(x.fecha);return d>=s&&d<=e})}
+function sumMonto(arr){return arr.reduce((s,x)=>s+x.monto,0)}
+function groupByDate(arr){return arr.reduce((a,x)=>{a[x.fecha]=(a[x.fecha]||0)+x.monto;return a},{})}
+function groupBy(arr,key){return arr.reduce((a,x)=>{a[x[key]]=(a[x[key]]||0)+x.monto;return a},{})}
+function getDatesArray(s,e){const d=[];const c=new Date(s);while(c<=e){d.push(c.toISOString().split('T')[0]);c.setDate(c.getDate()+1)}return d}
+
+// ========== AUTH ==========
+window.doLogin = async function(){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const err=document.getElementById('authErr');
+  err.style.display='none';
+  try{
+    await signInWithEmailAndPassword(auth,email,pass);
+  }catch(e){
+    err.textContent='❌ '+(e.code==='auth/invalid-credential'?'Correo o contraseña incorrectos':e.message);
+    err.style.display='block';
+  }
+}
+
+window.doLogout = async function(){
+  if(unsubIngresos)unsubIngresos();
+  if(unsubEgresos)unsubEgresos();
+  await signOut(auth);
+}
+
+onAuthStateChanged(auth, async(user)=>{
+  document.getElementById('loadingOverlay').style.display='none';
+  if(user){
+    currentUser=user;
+    const snap=await getDoc(doc(db,'users',user.uid));
+    currentRole=(snap.exists()?snap.data().role:'worker');
+    document.getElementById('authScreen').style.display='none';
+    document.getElementById('mainApp').style.display='block';
+    document.getElementById('userBadge').textContent=user.email.split('@')[0];
+    const rb=document.getElementById('roleBadge');
+    rb.textContent=currentRole==='admin'?'👑 Admin':'👷 Trabajador';
+    rb.className='role-badge '+(currentRole==='admin'?'role-admin':'role-worker');
+    // Admin tabs visibility
+    if(currentRole!=='admin'){
+      document.getElementById('tabReportes').style.display='none';
+      document.getElementById('tabAdmin').style.display='none';
+    } else {
+      document.getElementById('tabReportes').style.display='block';
+      document.getElementById('tabAdmin').style.display='block';
+    }
+    // Delete col in historial
+    if(currentRole==='admin')document.getElementById('thAcciones').textContent='Acciones';
+    startListeners();
+    setDefaults();
+    updateClock();
+  }else{
+    currentUser=null;currentRole=null;
+    document.getElementById('mainApp').style.display='none';
+    document.getElementById('authScreen').style.display='flex';
+  }
+});
+
+// ========== REALTIME LISTENERS ==========
+function startListeners(){
+  if(unsubIngresos)unsubIngresos();
+  if(unsubEgresos)unsubEgresos();
+  const qI=query(collection(db,'ingresos'),orderBy('fecha','desc'));
+  unsubIngresos=onSnapshot(qI,snap=>{
+    ingresos=snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('syncStatus').textContent='Sincronizado ✓ '+new Date().toLocaleTimeString('es-PE');
+    if(document.getElementById('section-dashboard').classList.contains('active'))renderDashboard();
+    if(document.getElementById('section-historial').classList.contains('active'))renderHistorial();
+    if(document.getElementById('section-reportes').classList.contains('active'))renderReportes();
+  });
+  const qE=query(collection(db,'egresos'),orderBy('fecha','desc'));
+  unsubEgresos=onSnapshot(qE,snap=>{
+    egresos=snap.docs.map(d=>({id:d.id,...d.data()}));
+    document.getElementById('syncStatus').textContent='Sincronizado ✓ '+new Date().toLocaleTimeString('es-PE');
+    if(document.getElementById('section-dashboard').classList.contains('active'))renderDashboard();
+    if(document.getElementById('section-historial').classList.contains('active'))renderHistorial();
+    if(document.getElementById('section-reportes').classList.contains('active'))renderReportes();
+  });
+}
+
+// ========== NAVIGATION ==========
+window.showSection = function(name,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('section-'+name).classList.add('active');
+  if(el)el.classList.add('active');
+  if(name==='dashboard')renderDashboard();
+  if(name==='historial')renderHistorial();
+  if(name==='reportes')renderReportes();
+  if(name==='admin')loadAdminData();
+}
+
+// ========== CLOCK ==========
+function updateClock(){
+  if(!currentUser)return;
+  const n=new Date();
+  const days=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const months=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  document.getElementById('headerDate').textContent=days[n.getDay()]+', '+n.getDate()+' '+months[n.getMonth()]+' '+n.getFullYear();
+  document.getElementById('headerTime').textContent=n.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  setTimeout(updateClock,1000);
+}
+
+function setDefaults(){
+  // Init primer item
+  if(boletaItems.length===0) setTimeout(agregarItem, 200);
+  const t=getToday(),h=new Date().toTimeString().slice(0,5);
+  ['ing_fecha','eg_fecha'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  const ih=document.getElementById('ing_hora');if(ih)ih.value=h;
+}
+
+// ========== REGISTRAR ==========
+// Items de la boleta actual
+let boletaItems = [];
+let itemCounter = 0;
+
+window.agregarItem = function(){
+  itemCounter++;
+  const id = 'item_'+itemCounter;
+  boletaItems.push({id});
+  const div = document.createElement('div');
+  div.className = 'item-row';
+  div.id = id;
+  div.innerHTML = `
+    <select id="${id}_cat" onchange="recalcularTotal()">
+      <option value="cerveza_chop">🍺 Cerveza Artesanal – Chop</option>
+      <option value="cerveza_botella">🍺 Cerveza Artesanal – Botella</option>
+      <option value="cerveza_clasica">🍻 Cerveza Clásica</option>
+      <option value="tragos">🍹 Tragos</option>
+      <option value="comida">🍔 Comidas</option>
+      <option value="snacks">🍬 Snacks</option>
+      <option value="vinos">🍷 Vinos</option>
+    </select>
+    <input type="number" id="${id}_monto" placeholder="S/ 0.00" step="0.01" min="0" oninput="recalcularTotal()">
+    <button class="item-del" onclick="eliminarItem('${id}')">✖</button>`;
+  document.getElementById('ing_items_container').appendChild(div);
+  recalcularTotal();
+}
+
+window.eliminarItem = function(id){
+  document.getElementById(id).remove();
+  boletaItems = boletaItems.filter(x=>x.id!==id);
+  recalcularTotal();
+}
+
+window.recalcularTotal = function(){
+  let total = 0;
+  boletaItems.forEach(item=>{
+    const el = document.getElementById(item.id+'_monto');
+    if(el) total += parseFloat(el.value)||0;
+  });
+  document.getElementById('ing_total').textContent = fmt(total);
+}
+
+window.registrarIngreso = async function(){
+  const fecha=document.getElementById('ing_fecha').value;
+  const hora=document.getElementById('ing_hora').value;
+  const tipo_dia=document.getElementById('ing_tipo_dia').value;
+  const pago=document.getElementById('ing_pago').value;
+  const desc=document.getElementById('ing_desc').value.trim();
+  const comprobante=document.getElementById('ing_comprobante').value.trim();
+
+  if(!fecha){showAlert('alertIngreso','error','⚠️ Completa la fecha');return}
+  if(boletaItems.length===0){showAlert('alertIngreso','error','⚠️ Agrega al menos una categoría');return}
+
+  // Validar que todos los items tengan monto
+  let totalBoleta = 0;
+  const items = [];
+  for(const item of boletaItems){
+    const cat = document.getElementById(item.id+'_cat').value;
+    const monto = parseFloat(document.getElementById(item.id+'_monto').value);
+    if(isNaN(monto)||monto<=0){showAlert('alertIngreso','error','⚠️ Todos los productos deben tener un monto válido');return}
+    items.push({cat, monto});
+    totalBoleta += monto;
+  }
+
+  try{
+    // Guardar un registro por cada item, todos con el mismo comprobante
+    const batch_promises = items.map(item =>
+      addDoc(collection(db,'ingresos'),{
+        fecha, hora, tipo_dia,
+        cat: item.cat,
+        monto: item.monto,
+        pago, desc, comprobante,
+        total_boleta: totalBoleta,
+        uid: currentUser.uid,
+        ts: Date.now()
+      })
+    );
+    await Promise.all(batch_promises);
+    showAlert('alertIngreso','success',`✅ Boleta guardada — ${items.length} categorías — Total: ${fmt(totalBoleta)}`);
+    // Limpiar formulario
+    document.getElementById('ing_items_container').innerHTML='';
+    document.getElementById('ing_desc').value='';
+    document.getElementById('ing_comprobante').value='';
+    document.getElementById('ing_total').textContent='S/ 0.00';
+    boletaItems=[];
+    itemCounter=0;
+  }catch(e){showAlert('alertIngreso','error','❌ Error: '+e.message)}
+}
+
+window.registrarEgreso = async function(){
+  const fecha=document.getElementById('eg_fecha').value;
+  const cat=document.getElementById('eg_cat').value;
+  const monto=parseFloat(document.getElementById('eg_monto').value);
+  const pago=document.getElementById('eg_pago').value;
+  const desc=document.getElementById('eg_desc').value.trim();
+  const comprobante=document.getElementById('eg_comprobante').value.trim();
+  if(!fecha||isNaN(monto)||monto<=0){showAlert('alertEgreso','error','⚠️ Completa fecha y monto válido');return}
+  try{
+    await addDoc(collection(db,'egresos'),{fecha,cat,monto,pago,desc,comprobante,uid:currentUser.uid,ts:Date.now()});
+    showAlert('alertEgreso','success','✅ Egreso registrado en Firebase');
+    document.getElementById('eg_monto').value='';
+    document.getElementById('eg_desc').value='';
+    document.getElementById('eg_comprobante').value='';
+  }catch(e){showAlert('alertEgreso','error','❌ Error: '+e.message)}
+}
+
+window.eliminar = async function(tipo,id){
+  if(currentRole!=='admin'){alert('Solo el administrador puede eliminar registros.');return}
+  if(!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.'))return;
+  await deleteDoc(doc(db,tipo,id));
+}
+
+function showAlert(id,type,msg){
+  const el=document.getElementById(id);
+  el.className='alert alert-'+(type==='success'?'success':'error')+' show';
+  el.textContent=msg;
+  setTimeout(()=>el.classList.remove('show'),4000);
+}
+
+// ========== CHARTS ==========
+const charts={};
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
+const COPTS={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(253,243,227,0.7)',font:{size:11}}}}};
+const gc='rgba(212,134,10,0.1)',tc='rgba(253,243,227,0.4)';
+function lineScales(){return{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10},callback:v=>'S/'+v},grid:{color:gc}}}}
+
+// ========== DASHBOARD ==========
+function renderDashboard(){
+  const today=getToday();
+  const {start:ms,end:me}=getMonthRange();
+  const {start:ws}=getDateRange(7);
+  const ing_h=ingresos.filter(x=>x.fecha===today);
+  const eg_h=egresos.filter(x=>x.fecha===today);
+  const ing_m=filterByRange(ingresos,ms,me);
+  const eg_m=filterByRange(egresos,ms,me);
+  const ing_s=filterByRange(ingresos,ws,new Date());
+  const tiH=sumMonto(ing_h),teH=sumMonto(eg_h),tiM=sumMonto(ing_m),teM=sumMonto(eg_m);
+  const gH=tiH-teH,gM=tiM-teM;
+  const kpis=[
+    {label:'Ingresos Hoy',val:fmt(tiH),cls:'amber',icon:'💰',sub:ing_h.length+' trans.'},
+    {label:'Egresos Hoy',val:fmt(teH),cls:'red',icon:'📤',sub:eg_h.length+' reg.'},
+    {label:'Ganancia Hoy',val:fmt(gH),cls:gH>=0?'green':'red',icon:'💹',sub:gH>=0?'✅ Positivo':'⚠️ Negativo'},
+    {label:'Ingresos Mes',val:fmt(tiM),cls:'amber',icon:'📅',sub:ing_m.length+' trans.'},
+    {label:'Egresos Mes',val:fmt(teM),cls:'red',icon:'📤',sub:''},
+    {label:'Ganancia Mes',val:fmt(gM),cls:gM>=0?'green':'red',icon:'🏆',sub:tiM>0?'Margen: '+(gM/tiM*100).toFixed(1)+'%':''},
+    {label:'Ingresos Semana',val:fmt(sumMonto(ing_s)),cls:'amber',icon:'📈',sub:'7 días'},
+    {label:'Total Registros',val:(ingresos.length+egresos.length).toString(),cls:'',icon:'📋',sub:ingresos.length+' ing. / '+egresos.length+' eg.'},
+  ];
+  document.getElementById('kpiGrid').innerHTML=kpis.map(k=>`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.cls}">${k.val}</div><div class="kpi-sub">${k.sub}</div><div class="kpi-icon">${k.icon}</div></div>`).join('');
+  // Line chart
+  const {start:ls}=getDateRange(14);
+  const d14=getDatesArray(ls,new Date());
+  const ibD=groupByDate(filterByRange(ingresos,ls,new Date()));
+  const ebD=groupByDate(filterByRange(egresos,ls,new Date()));
+  destroyChart('chartLine');
+  charts['chartLine']=new Chart(document.getElementById('chartLine'),{type:'line',data:{labels:d14.map(d=>d.slice(5)),datasets:[{label:'Ingresos',data:d14.map(d=>ibD[d]||0),borderColor:'#F5A623',backgroundColor:'rgba(245,166,35,0.1)',tension:0.4,fill:true,pointRadius:3},{label:'Egresos',data:d14.map(d=>ebD[d]||0),borderColor:'#E74C3C',backgroundColor:'rgba(231,76,60,0.08)',tension:0.4,fill:true,pointRadius:3}]},options:{...COPTS,scales:lineScales()}});
+  // Doughnut
+  const ct=groupBy(ing_m,'cat');const ck=Object.keys(ct);
+  const dc=['#F5A623','#9B59B6','#E67E22','#3498DB','#2ECC71','#E74C3C','#95A5A6'];
+  destroyChart('chartDoughnut');
+  charts['chartDoughnut']=new Chart(document.getElementById('chartDoughnut'),{type:'doughnut',data:{labels:ck.map(k=>CAT_ING[k]||k),datasets:[{data:ck.map(k=>ct[k]),backgroundColor:dc.slice(0,ck.length),borderWidth:2,borderColor:'#000000'}]},options:{...COPTS,cutout:'60%'}});
+  // Pagos pie
+  const pt=groupBy(ing_m,'pago');const pk=Object.keys(pt);
+  const pc={efectivo:'#F1C40F',tarjeta:'#3498DB',yape:'#2ECC71',plin:'#1ABC9C',transferencia:'#9B59B6'};
+  destroyChart('chartPagos');
+  charts['chartPagos']=new Chart(document.getElementById('chartPagos'),{type:'pie',data:{labels:pk.map(k=>PAGO[k]||k),datasets:[{data:pk.map(k=>pt[k]),backgroundColor:pk.map(k=>pc[k]||'#95A5A6'),borderWidth:2,borderColor:'#000000'}]},options:{...COPTS}});
+  // Egresos bar
+  const et=groupBy(eg_m,'cat');const ek=Object.keys(et).sort((a,b)=>et[b]-et[a]);
+  destroyChart('chartEgresos');
+  charts['chartEgresos']=new Chart(document.getElementById('chartEgresos'),{type:'bar',data:{labels:ek.map(k=>CAT_EG[k]||k),datasets:[{label:'Egresos (S/)',data:ek.map(k=>et[k]),backgroundColor:'rgba(231,76,60,0.6)',borderColor:'#E74C3C',borderWidth:1,borderRadius:4}]},options:{...COPTS,indexAxis:'y',scales:{x:{ticks:{color:tc,font:{size:10},callback:v=>'S/'+v},grid:{color:gc}},y:{ticks:{color:tc,font:{size:9}},grid:{color:'transparent'}}}}});
+  // Días del mes
+  const dm=getDatesArray(ms,me);const idm=groupByDate(ing_m);
+  destroyChart('chartDias');
+  charts['chartDias']=new Chart(document.getElementById('chartDias'),{type:'bar',data:{labels:dm.map(d=>d.slice(8)),datasets:[{label:'Ingreso S/',data:dm.map(d=>idm[d]||0),backgroundColor:dm.map(d=>{const dy=new Date(d).getDay();return(dy===5||dy===6)?'rgba(231,76,60,0.7)':'rgba(245,166,35,0.55)'}),borderRadius:3}]},options:{...COPTS,scales:lineScales(),plugins:{...COPTS.plugins,tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}}}});
+  // Resumen rápido
+  const sI=sumMonto(ing_m.filter(x=>x.tipo_dia==='show'));
+  const nI=sumMonto(ing_m.filter(x=>x.tipo_dia==='normal'));
+  const fI=sumMonto(ing_m.filter(x=>x.tipo_dia==='festivo'));
+  const tc2=Object.entries(groupBy(ing_m,'cat')).sort((a,b)=>b[1]-a[1])[0];
+  const tg=Object.entries(groupBy(eg_m,'cat')).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('resumenRapido').innerHTML=`
+    <div class="prog-wrap"><div class="prog-label"><span>🎸 Noches Show</span><span>${fmt(sI)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiM>0?Math.min(100,sI/tiM*100):0}%;background:linear-gradient(90deg,#E74C3C,#F5A623)"></div></div></div>
+    <div class="prog-wrap"><div class="prog-label"><span>📅 Días Normales</span><span>${fmt(nI)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiM>0?Math.min(100,nI/tiM*100):0}%;background:linear-gradient(90deg,#3498DB,#2ECC71)"></div></div></div>
+    <div class="prog-wrap"><div class="prog-label"><span>🎉 Festivos</span><span>${fmt(fI)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiM>0?Math.min(100,fI/tiM*100):0}%;background:linear-gradient(90deg,#9B59B6,#3498DB)"></div></div></div>
+    <div class="sep"></div>
+    <div style="font-size:0.8rem;color:rgba(253,243,227,0.6);line-height:2">
+      ${tc2?`🏆 <strong style="color:var(--amber-light)">Mayor ingreso:</strong> ${CAT_ING[tc2[0]]||tc2[0]} → ${fmt(tc2[1])}`:''}
+      <br>${tg?`⚠️ <strong style="color:var(--red)">Mayor gasto:</strong> ${CAT_EG[tg[0]]||tg[0]} → ${fmt(tg[1])}`:''}
+    </div>
+    <div class="sep"></div>
+    <div style="text-align:center">
+      <div style="font-size:0.68rem;color:rgba(253,243,227,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Margen del Mes</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:2.2rem;color:${gM>=0?'var(--green)':'var(--red)'}">
+        ${tiM>0?(gM/tiM*100).toFixed(1)+'%':'—'}
+      </div>
+    </div>`;
+}
+
+// ========== HISTORIAL ==========
+window.renderHistorial = function(){
+  const desde=document.getElementById('filtro_desde').value;
+  const hasta=document.getElementById('filtro_hasta').value;
+  const tipo=document.getElementById('filtro_tipo').value;
+  const busca=document.getElementById('filtro_busca').value.toLowerCase();
+  let rows=[];
+  if(tipo!=='egreso')ingresos.forEach(x=>rows.push({...x,_tipo:'ingreso',_col:'ingresos'}));
+  if(tipo!=='ingreso')egresos.forEach(x=>rows.push({...x,_tipo:'egreso',_col:'egresos'}));
+  if(desde)rows=rows.filter(x=>x.fecha>=desde);
+  if(hasta)rows=rows.filter(x=>x.fecha<=hasta);
+  if(busca)rows=rows.filter(x=>{
+    const c=(x._tipo==='ingreso'?CAT_ING[x.cat]:CAT_EG[x.cat])||x.cat;
+    return c.toLowerCase().includes(busca)||(x.desc||'').toLowerCase().includes(busca);
+  });
+  rows.sort((a,b)=>b.fecha.localeCompare(a.fecha)||(b.ts||0)-(a.ts||0));
+  document.getElementById('historialEmpty').style.display=rows.length===0?'block':'none';
+  document.getElementById('historialCount').textContent=rows.length+' registros';
+  const tb=document.getElementById('tablaHistorial');
+  tb.innerHTML=rows.map(x=>{
+    const isI=x._tipo==='ingreso';
+    const cl=isI?(CAT_ING[x.cat]||x.cat):(CAT_EG[x.cat]||x.cat);
+    const sb=isI&&x.tipo_dia==='show'?'<span style="background:rgba(231,76,60,0.15);color:var(--red);border:1px solid rgba(231,76,60,0.25);padding:2px 6px;border-radius:4px;font-size:0.68rem;font-weight:700">SHOW</span>':'';
+    const delBtn=currentRole==='admin'?`<button class="btn btn-danger btn-sm" onclick="eliminar('${x._col}','${x.id}')">🗑</button>`:'';
+    const editBtn=`<button class="btn btn-sm" style="background:rgba(52,152,219,0.2);border:1px solid rgba(52,152,219,0.4);color:var(--blue)" onclick="abrirModal('${x._tipo}','${x.id}')">✏️</button>`;
+    return`<tr><td>${x.fecha}</td><td><span class="badge ${isI?'badge-green':'badge-red'}">${isI?'INGRESO':'EGRESO'}</span></td><td>${cl} ${sb}</td><td style="font-size:0.8rem;color:var(--amber-light);font-weight:700">${x.comprobante||'—'}</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.desc||'—'}</td><td><span class="badge ${x.pago==='efectivo'?'badge-amber':x.pago==='tarjeta'?'badge-blue':'badge-purple'}">${PAGO[x.pago]||x.pago}</span></td><td style="font-weight:700;color:${isI?'var(--green)':'var(--red)'}">${isI?'+':'−'}${fmt(x.monto)}</td><td style="display:flex;gap:4px">${editBtn}${delBtn}</td></tr>`;
+  }).join('');
+}
+
+window.limpiarFiltros = function(){
+  ['filtro_desde','filtro_hasta','filtro_busca'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('filtro_tipo').value='todos';
+  renderHistorial();
+}
+
+window.exportarCSV = function(){
+  const rows=[['Fecha','Tipo','Categoría','Descripción','Método','Monto']];
+  ingresos.forEach(x=>rows.push([x.fecha,'Ingreso',CAT_ING[x.cat]||x.cat,x.desc||'',PAGO[x.pago]||x.pago,x.monto]));
+  egresos.forEach(x=>rows.push([x.fecha,'Egreso',CAT_EG[x.cat]||x.cat,x.desc||'',PAGO[x.pago]||x.pago,-x.monto]));
+  const csv=rows.map(r=>r.map(c=>'"'+c+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
+  a.download='casa_barril_'+getToday()+'.csv';a.click();
+}
+
+// ========== REPORTES ==========
+window.renderReportes = function(){
+  const per=document.getElementById('rep_periodo').value;
+  let start,end=new Date();
+  if(per==='mes'){const{start:ms}=getMonthRange();start=ms;}
+  else{const{start:rs}=getDateRange(parseInt(per));start=rs;}
+  const ing=filterByRange(ingresos,start,end);
+  const eg=filterByRange(egresos,start,end);
+  const tiI=sumMonto(ing),tiE=sumMonto(eg),gan=tiI-tiE;
+  const margen=tiI>0?(gan/tiI*100):0;
+  document.getElementById('kpiReportes').innerHTML=[
+    {label:'Total Ingresos',val:fmt(tiI),cls:'amber',icon:'💰'},
+    {label:'Total Egresos',val:fmt(tiE),cls:'red',icon:'📤'},
+    {label:'Ganancia Neta',val:fmt(gan),cls:gan>=0?'green':'red',icon:'💹'},
+    {label:'Margen',val:margen.toFixed(1)+'%',cls:margen>=30?'green':margen>=10?'amber':'red',icon:'📊'},
+    {label:'Ticket Promedio',val:ing.length>0?fmt(tiI/ing.length):'—',cls:'amber',icon:'🧾'},
+    {label:'Días con Ventas',val:new Set(ing.map(x=>x.fecha)).size.toString(),cls:'',icon:'📅'},
+  ].map(k=>`<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-value ${k.cls}">${k.val}</div><div class="kpi-icon">${k.icon}</div></div>`).join('');
+  const dates=getDatesArray(start,end);
+  const im=groupByDate(ing),em=groupByDate(eg);
+  let cum=0;const cumD=dates.map(d=>{cum+=(im[d]||0)-(em[d]||0);return cum;});
+  destroyChart('chartGanancias');
+  charts['chartGanancias']=new Chart(document.getElementById('chartGanancias'),{type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets:[{label:'Ganancia Acum.',data:cumD,borderColor:cumD[cumD.length-1]>=0?'#2ECC71':'#E74C3C',backgroundColor:cumD[cumD.length-1]>=0?'rgba(46,204,113,0.1)':'rgba(231,76,60,0.1)',fill:true,tension:0.4,pointRadius:2}]},options:{...COPTS,scales:lineScales()}});
+  destroyChart('chartIngDiario');
+  charts['chartIngDiario']=new Chart(document.getElementById('chartIngDiario'),{type:'bar',data:{labels:dates.map(d=>d.slice(5)),datasets:[{label:'Ingresos',data:dates.map(d=>im[d]||0),backgroundColor:'rgba(245,166,35,0.6)',borderColor:'#F5A623',borderWidth:1,borderRadius:3},{label:'Egresos',data:dates.map(d=>em[d]||0),backgroundColor:'rgba(231,76,60,0.5)',borderColor:'#E74C3C',borderWidth:1,borderRadius:3}]},options:{...COPTS,scales:lineScales()}});
+  const pm=groupBy(ing,'pago');const pc={efectivo:'#F1C40F',tarjeta:'#3498DB',yape:'#2ECC71',plin:'#1ABC9C',transferencia:'#9B59B6'};
+  document.getElementById('mixPagos').innerHTML=Object.entries(pm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="prog-wrap"><div class="prog-label"><span>${PAGO[k]||k}</span><span>${fmt(v)} (${tiI>0?(v/tiI*100).toFixed(1):0}%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiI>0?Math.min(100,v/tiI*100):0}%;background:${pc[k]||'#95A5A6'}"></div></div></div>`).join('')||'<div class="empty"><div class="empty-icon">💳</div>Sin datos</div>';
+  const cI=groupBy(ing,'cat');document.getElementById('topCatIng').innerHTML=Object.entries(cI).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v],i)=>`<div class="prog-wrap"><div class="prog-label"><span>${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${CAT_ING[k]||k}</span><span>${fmt(v)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiI>0?Math.min(100,v/tiI*100):0}%;background:linear-gradient(90deg,#D4860A,#F5A623)"></div></div></div>`).join('')||'<div class="empty"><div class="empty-icon">🍺</div>Sin datos</div>';
+  const cE=groupBy(eg,'cat');document.getElementById('topCatEg').innerHTML=Object.entries(cE).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v],i)=>`<div class="prog-wrap"><div class="prog-label"><span>${['🔴','🟠','🟡','⚪','⚫'][i]} ${CAT_EG[k]||k}</span><span>${fmt(v)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiE>0?Math.min(100,v/tiE*100):0}%;background:linear-gradient(90deg,#C0392B,#E74C3C)"></div></div></div>`).join('')||'<div class="empty"><div class="empty-icon">📤</div>Sin datos</div>';
+  const sDates=[...new Set(ing.filter(x=>x.tipo_dia==='show').map(x=>x.fecha))];
+  const nDates=[...new Set(ing.filter(x=>x.tipo_dia==='normal').map(x=>x.fecha))];
+  const ibs=groupByDate(ing.filter(x=>x.tipo_dia==='show'));const ibn=groupByDate(ing.filter(x=>x.tipo_dia==='normal'));
+  const aS=sDates.length>0?sDates.reduce((s,d)=>s+(ibs[d]||0),0)/sDates.length:0;
+  const aN=nDates.length>0?nDates.reduce((s,d)=>s+(ibn[d]||0),0)/nDates.length:0;
+  destroyChart('chartShow');
+  charts['chartShow']=new Chart(document.getElementById('chartShow'),{type:'bar',data:{labels:['Promedio Día Normal','Promedio Noche Show 🎸'],datasets:[{data:[aN,aS],backgroundColor:['rgba(52,152,219,0.6)','rgba(231,76,60,0.7)'],borderColor:['#3498DB','#E74C3C'],borderWidth:1,borderRadius:7}]},options:{...COPTS,plugins:{...COPTS.plugins,legend:{display:false}},scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>'S/'+v},grid:{color:gc}}}}});
+  const weeks=[];const cur=new Date(start);
+  while(cur<=end){const wS=new Date(cur),wE=new Date(cur);wE.setDate(wE.getDate()+6);if(wE>end)wE.setTime(end.getTime());const wI=sumMonto(filterByRange(ing,wS,wE)),wE2=sumMonto(filterByRange(eg,wS,wE));weeks.push({label:wS.toISOString().slice(5,10),margen:wI>0?((wI-wE2)/wI*100):0});cur.setDate(cur.getDate()+7);}
+  destroyChart('chartMargen');
+  charts['chartMargen']=new Chart(document.getElementById('chartMargen'),{type:'line',data:{labels:weeks.map(w=>w.label),datasets:[{label:'Margen %',data:weeks.map(w=>parseFloat(w.margen.toFixed(1))),borderColor:'#9B59B6',backgroundColor:'rgba(155,89,182,0.12)',fill:true,tension:0.4,pointRadius:4}]},options:{...COPTS,scales:{x:{ticks:{color:tc},grid:{color:gc}},y:{ticks:{color:tc,callback:v=>v+'%'},grid:{color:gc}}}}});
+}
+
+// ========== ADMIN ==========
+window.crearUsuario = async function(){
+  const email=document.getElementById('new_email').value.trim();
+  const pass=document.getElementById('new_pass').value;
+  const name=document.getElementById('new_name').value.trim();
+  const role=document.getElementById('new_role').value;
+  if(!email||!pass||!name){showAlert('alertAdmin','error','⚠️ Completa todos los campos');return}
+  try{
+    const uc=await createUserWithEmailAndPassword(auth,email,pass);
+    await setDoc(doc(db,'users',uc.user.uid),{email,name,role,createdAt:Date.now(),createdBy:currentUser.uid});
+    await signInWithEmailAndPassword(auth,currentUser.email,prompt('Por seguridad, confirma tu contraseña de administrador:'));
+    showAlert('alertAdmin','success','✅ Usuario creado: '+email);
+    document.getElementById('new_email').value='';
+    document.getElementById('new_pass').value='';
+    document.getElementById('new_name').value='';
+    loadAdminData();
+  }catch(e){showAlert('alertAdmin','error','❌ Error: '+e.message)}
+}
+
+window.eliminarUsuario = async function(uid, email){
+  if(!confirm('¿Eliminar al usuario ' + email + '?\nEsta acción no se puede deshacer.'))return;
+  try{
+    await deleteDoc(doc(db,'users',uid));
+    showAlert('alertAdmin','success','✅ Usuario eliminado: '+email);
+    loadAdminData();
+  }catch(e){
+    showAlert('alertAdmin','error','❌ Error al eliminar: '+e.message);
+  }
+}
+
+async function loadAdminData(){
+  if(currentRole!=='admin')return;
+  const snap=await getDocs(collection(db,'users'));
+  const users=snap.docs.map(d=>({id:d.id,...d.data()}));
+  const div=document.getElementById('listaUsuarios');
+  if(users.length===0){div.innerHTML='<div class="empty"><div class="empty-icon">👥</div>No hay usuarios registrados</div>';return}
+  div.innerHTML=users.map(u=>`
+    <div class="user-card">
+      <div class="user-info">
+        <div class="user-name">${u.name||'Sin nombre'}</div>
+        <div class="user-email">${u.email}</div>
+      </div>
+      <div class="user-actions">
+        <span class="role-badge ${u.role==='admin'?'role-admin':'role-worker'}">${u.role==='admin'?'👑 Admin':'👷 Trabajador'}</span>
+        ${u.id!==currentUser.uid?`<button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.id}','${u.email}')">🗑 Eliminar</button>`:'<span style="font-size:0.7rem;color:rgba(253,243,227,0.3)">(tú)</span>'}
+      </div>
+    </div>`).join('');
+}
+
+
+// ========== MODAL EDITAR ==========
+let editando = {tipo:null, id:null};
+
+window.abrirModal = function(tipo, id){
+  const arr = tipo==='ingreso' ? ingresos : egresos;
+  const reg = arr.find(x=>x.id===id);
+  if(!reg) return;
+  editando = {tipo, id};
+  document.getElementById('modalTitulo').textContent = tipo==='ingreso' ? '✏️ Editar Ingreso' : '✏️ Editar Egreso';
+  
+  if(tipo==='ingreso'){
+    document.getElementById('modalContenido').innerHTML = `
+      <div class="form-row">
+        <div class="form-group"><label>Fecha</label><input type="date" id="edit_fecha" value="${reg.fecha||''}"></div>
+        <div class="form-group"><label>Hora</label><input type="time" id="edit_hora" value="${reg.hora||''}"></div>
+        <div class="form-group"><label>Tipo de Día</label>
+          <select id="edit_tipo_dia">
+            <option value="normal" ${reg.tipo_dia==='normal'?'selected':''}>Martes–Jueves (normal)</option>
+            <option value="show" ${reg.tipo_dia==='show'?'selected':''}>Viernes/Sábado (SHOW 🎸)</option>
+            <option value="festivo" ${reg.tipo_dia==='festivo'?'selected':''}>Día Festivo 🎉</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Categoría</label>
+          <select id="edit_cat">
+            <option value="cerveza_chop" ${reg.cat==='cerveza_chop'?'selected':''}>🍺 Cerveza Artesanal – Chop</option>
+            <option value="cerveza_botella" ${reg.cat==='cerveza_botella'?'selected':''}>🍺 Cerveza Artesanal – Botella</option>
+            <option value="cerveza_clasica" ${reg.cat==='cerveza_clasica'?'selected':''}>🍻 Cerveza Clásica</option>
+            <option value="tragos" ${reg.cat==='tragos'?'selected':''}>🍹 Tragos</option>
+            <option value="comida" ${reg.cat==='comida'?'selected':''}>🍔 Comidas</option>
+            <option value="snacks" ${reg.cat==='snacks'?'selected':''}>🍬 Snacks</option>
+            <option value="vinos" ${reg.cat==='vinos'?'selected':''}>🍷 Vinos</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Monto (S/.)</label><input type="number" id="edit_monto" value="${reg.monto||0}" step="0.01" min="0"></div>
+        <div class="form-group"><label>Método de Pago</label>
+          <select id="edit_pago">
+            <option value="efectivo" ${reg.pago==='efectivo'?'selected':''}>💵 Efectivo</option>
+            <option value="tarjeta" ${reg.pago==='tarjeta'?'selected':''}>💳 Tarjeta</option>
+            <option value="yape" ${reg.pago==='yape'?'selected':''}>📱 Yape</option>
+            <option value="plin" ${reg.pago==='plin'?'selected':''}>📱 Plin</option>
+            <option value="transferencia" ${reg.pago==='transferencia'?'selected':''}>🏦 Transferencia</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>N° Boleta / Factura</label><input type="text" id="edit_comprobante" value="${reg.comprobante||''}"></div>
+        <div class="form-group" style="grid-column:2/-1"><label>Descripción</label><textarea id="edit_desc">${reg.desc||''}</textarea></div>
+      </div>`;
+  } else {
+    document.getElementById('modalContenido').innerHTML = `
+      <div class="form-row">
+        <div class="form-group"><label>Fecha</label><input type="date" id="edit_fecha" value="${reg.fecha||''}"></div>
+        <div class="form-group"><label>Categoría</label>
+          <select id="edit_cat">
+            <option value="insumos_bebidas" ${reg.cat==='insumos_bebidas'?'selected':''}>🍺 Insumos Bebidas</option>
+            <option value="insumos_comida" ${reg.cat==='insumos_comida'?'selected':''}>🥩 Insumos Alimentos</option>
+            <option value="personal" ${reg.cat==='personal'?'selected':''}>👥 Personal</option>
+            <option value="show_artistas" ${reg.cat==='show_artistas'?'selected':''}>🎸 Artistas/Shows</option>
+            <option value="alquiler" ${reg.cat==='alquiler'?'selected':''}>🏠 Alquiler</option>
+            <option value="servicios" ${reg.cat==='servicios'?'selected':''}>💡 Servicios</option>
+            <option value="mantenimiento" ${reg.cat==='mantenimiento'?'selected':''}>🔧 Mantenimiento</option>
+            <option value="marketing" ${reg.cat==='marketing'?'selected':''}>📣 Marketing</option>
+            <option value="impuestos" ${reg.cat==='impuestos'?'selected':''}>📝 Impuestos</option>
+            <option value="otros" ${reg.cat==='otros'?'selected':''}>📦 Otros</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Monto (S/.)</label><input type="number" id="edit_monto" value="${reg.monto||0}" step="0.01" min="0"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Método de Pago</label>
+          <select id="edit_pago">
+            <option value="efectivo" ${reg.pago==='efectivo'?'selected':''}>💵 Efectivo</option>
+            <option value="tarjeta" ${reg.pago==='tarjeta'?'selected':''}>💳 Tarjeta</option>
+            <option value="transferencia" ${reg.pago==='transferencia'?'selected':''}>🏦 Transferencia</option>
+            <option value="yape" ${reg.pago==='yape'?'selected':''}>📱 Yape</option>
+            <option value="plin" ${reg.pago==='plin'?'selected':''}>📱 Plin</option>
+          </select>
+        </div>
+        <div class="form-group"><label>N° Boleta / Factura</label><input type="text" id="edit_comprobante" value="${reg.comprobante||''}"></div>
+        <div class="form-group"><label>Descripción</label><input type="text" id="edit_desc" value="${reg.desc||''}"></div>
+      </div>`;
+  }
+  document.getElementById('modalOverlay').style.display='flex';
+}
+
+window.cerrarModal = function(){
+  document.getElementById('modalOverlay').style.display='none';
+  editando={tipo:null,id:null};
+}
+
+window.guardarEdicion = async function(){
+  const {tipo, id} = editando;
+  if(!tipo||!id) return;
+  const fecha = document.getElementById('edit_fecha').value;
+  const monto = parseFloat(document.getElementById('edit_monto').value);
+  const cat = document.getElementById('edit_cat').value;
+  const pago = document.getElementById('edit_pago').value;
+  const comprobante = document.getElementById('edit_comprobante').value.trim();
+  const desc = document.getElementById('edit_desc').value.trim();
+  if(!fecha||isNaN(monto)||monto<=0){showAlert('alertModal','error','⚠️ Completa fecha y monto válido');return}
+  
+  try{
+    const col = tipo==='ingreso' ? 'ingresos' : 'egresos';
+    const data = {fecha, monto, cat, pago, comprobante, desc};
+    if(tipo==='ingreso'){
+      data.hora = document.getElementById('edit_hora').value;
+      data.tipo_dia = document.getElementById('edit_tipo_dia').value;
+    }
+    const {updateDoc} = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+    await updateDoc(doc(db, col, id), data);
+    showAlert('alertModal','success','✅ Registro actualizado');
+    setTimeout(()=>cerrarModal(), 1500);
+  }catch(e){
+    showAlert('alertModal','error','❌ Error: '+e.message);
+  }
+}
+
+</script>
+
+</body></html>
