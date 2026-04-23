@@ -228,35 +228,15 @@ window.renderAnual = function(){
       labels: MESES_SHORT,
       datasets: [
         {
-          label: 'Ingresos Acum.',
-          data: acumIng,
-          borderColor: '#F5A623',
-          backgroundColor: 'rgba(245,166,35,0.08)',
-          tension: 0.4,
-          fill: true,
-          pointRadius: 4,
-          pointBackgroundColor: '#F5A623'
-        },
-        {
-          label: 'Egresos Acum.',
-          data: acumEg,
-          borderColor: '#E74C3C',
-          backgroundColor: 'rgba(231,76,60,0.06)',
-          tension: 0.4,
-          fill: true,
-          pointRadius: 4,
-          pointBackgroundColor: '#E74C3C'
-        },
-        {
-          label: 'Ganancia Acum.',
+          label: 'Ganancia Acumulada',
           data: acumGan,
-          borderColor: '#2ECC71',
-          backgroundColor: 'rgba(46,204,113,0.08)',
+          borderColor: acumGan[acumGan.length-1] >= 0 ? '#2ECC71' : '#E74C3C',
+          backgroundColor: acumGan[acumGan.length-1] >= 0 ? 'rgba(46,204,113,0.12)' : 'rgba(231,76,60,0.1)',
           tension: 0.4,
           fill: true,
-          pointRadius: 4,
-          pointBackgroundColor: '#2ECC71',
-          borderDash: acumGan[acumGan.length-1] < 0 ? [5,5] : []
+          pointRadius: 5,
+          pointBackgroundColor: acumGan.map(v => v>=0 ? '#2ECC71' : '#E74C3C'),
+          borderWidth: 2
         }
       ]
     },
@@ -1502,35 +1482,15 @@ window.renderAnual = function(){
       labels: MESES_SHORT,
       datasets: [
         {
-          label: 'Ingresos Acum.',
-          data: acumIng,
-          borderColor: '#F5A623',
-          backgroundColor: 'rgba(245,166,35,0.08)',
-          tension: 0.4,
-          fill: true,
-          pointRadius: 4,
-          pointBackgroundColor: '#F5A623'
-        },
-        {
-          label: 'Egresos Acum.',
-          data: acumEg,
-          borderColor: '#E74C3C',
-          backgroundColor: 'rgba(231,76,60,0.06)',
-          tension: 0.4,
-          fill: true,
-          pointRadius: 4,
-          pointBackgroundColor: '#E74C3C'
-        },
-        {
-          label: 'Ganancia Acum.',
+          label: 'Ganancia Acumulada',
           data: acumGan,
-          borderColor: '#2ECC71',
-          backgroundColor: 'rgba(46,204,113,0.08)',
+          borderColor: acumGan[acumGan.length-1] >= 0 ? '#2ECC71' : '#E74C3C',
+          backgroundColor: acumGan[acumGan.length-1] >= 0 ? 'rgba(46,204,113,0.12)' : 'rgba(231,76,60,0.1)',
           tension: 0.4,
           fill: true,
-          pointRadius: 4,
-          pointBackgroundColor: '#2ECC71',
-          borderDash: acumGan[acumGan.length-1] < 0 ? [5,5] : []
+          pointRadius: 5,
+          pointBackgroundColor: acumGan.map(v => v>=0 ? '#2ECC71' : '#E74C3C'),
+          borderWidth: 2
         }
       ]
     },
