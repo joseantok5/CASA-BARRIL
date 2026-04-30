@@ -222,6 +222,73 @@ window.renderAnual = function(){
     }
   });
 
+  // ---- MÉTODOS DE PAGO INGRESOS ----
+  const pagoIngTotals = groupBy(ing,'pago');
+  const pagoIngKeys = Object.keys(pagoIngTotals).sort((a,b)=>pagoIngTotals[b]-pagoIngTotals[a]);
+  const pagoColors = {efectivo:'#F1C40F',tarjeta:'#3498DB',yape:'#2ECC71',plin:'#1ABC9C',transferencia:'#9B59B6',mixto:'#E67E22'};
+
+  destroyChart('chartPagoIng');
+  charts['chartPagoIng'] = new Chart(document.getElementById('chartPagoIng'), {
+    type: 'bar',
+    data: {
+      labels: pagoIngKeys.map(k => PAGO[k]||k),
+      datasets: [{
+        label: 'Ingresos S/',
+        data: pagoIngKeys.map(k => pagoIngTotals[k]),
+        backgroundColor: pagoIngKeys.map(k => pagoColors[k]||'#95A5A6'),
+        borderColor: pagoIngKeys.map(k => pagoColors[k]||'#95A5A6'),
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      ...COPTS,
+      indexAxis: 'y',
+      plugins: {
+        ...COPTS.plugins,
+        legend: {display:false},
+        tooltip: { callbacks: { label: ctx => fmt(ctx.raw) + ' (' + (tiI>0?(ctx.raw/tiI*100).toFixed(1):0)+'%)' } }
+      },
+      scales: {
+        x: { ticks:{color:tc,callback:v=>'S/'+v}, grid:{color:gc} },
+        y: { ticks:{color:tc,font:{size:11}}, grid:{color:'transparent'} }
+      }
+    }
+  });
+
+  // ---- MÉTODOS DE PAGO EGRESOS ----
+  const pagoEgTotals = groupBy(eg,'pago');
+  const pagoEgKeys = Object.keys(pagoEgTotals).sort((a,b)=>pagoEgTotals[b]-pagoEgTotals[a]);
+
+  destroyChart('chartPagoEg');
+  charts['chartPagoEg'] = new Chart(document.getElementById('chartPagoEg'), {
+    type: 'bar',
+    data: {
+      labels: pagoEgKeys.map(k => PAGO[k]||k),
+      datasets: [{
+        label: 'Egresos S/',
+        data: pagoEgKeys.map(k => pagoEgTotals[k]),
+        backgroundColor: pagoEgKeys.map(k => pagoColors[k]||'#95A5A6'),
+        borderColor: pagoEgKeys.map(k => pagoColors[k]||'#95A5A6'),
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      ...COPTS,
+      indexAxis: 'y',
+      plugins: {
+        ...COPTS.plugins,
+        legend: {display:false},
+        tooltip: { callbacks: { label: ctx => fmt(ctx.raw) + ' (' + (tiE>0?(ctx.raw/tiE*100).toFixed(1):0)+'%)' } }
+      },
+      scales: {
+        x: { ticks:{color:tc,callback:v=>'S/'+v}, grid:{color:gc} },
+        y: { ticks:{color:tc,font:{size:11}}, grid:{color:'transparent'} }
+      }
+    }
+  });
+
   // ---- GRÁFICO CURVA ACUMULADO ----
   destroyChart('chartAnualCurva');
   charts['chartAnualCurva'] = new Chart(document.getElementById('chartAnualCurva'), {
@@ -830,6 +897,17 @@ tr:hover td{background:rgba(212,134,10,0.05)}
       <div class="card"><div class="card-title">💳 Mix de Pagos</div><div id="mixPagos"></div></div>
       <div class="card"><div class="card-title">🍺 Top Ingresos</div><div id="topCatIng"></div></div>
       <div class="card"><div class="card-title">📤 Top Gastos</div><div id="topCatEg"></div></div>
+    </div>
+
+    <div class="grid-2 mb-4">
+      <div class="card">
+        <div class="card-title">💰 Ingresos por Método de Pago</div>
+        <div class="chart-box"><canvas id="chartPagoIng"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 Egresos por Método de Pago</div>
+        <div class="chart-box"><canvas id="chartPagoEg"></canvas></div>
+      </div>
     </div>
     <div class="grid-2">
       <div class="card"><div class="card-title">🎸 Show vs Normal</div><div class="chart-box"><canvas id="chartShow"></canvas></div></div>
@@ -1636,6 +1714,73 @@ window.renderAnual = function(){
       scales: {
         x: { ticks:{color:tc,font:{size:10}}, grid:{color:gc} },
         y: { ticks:{color:tc,font:{size:10},callback:v=>'S/'+v}, grid:{color:gc} }
+      }
+    }
+  });
+
+  // ---- MÉTODOS DE PAGO INGRESOS ----
+  const pagoIngTotals = groupBy(ing,'pago');
+  const pagoIngKeys = Object.keys(pagoIngTotals).sort((a,b)=>pagoIngTotals[b]-pagoIngTotals[a]);
+  const pagoColors = {efectivo:'#F1C40F',tarjeta:'#3498DB',yape:'#2ECC71',plin:'#1ABC9C',transferencia:'#9B59B6',mixto:'#E67E22'};
+
+  destroyChart('chartPagoIng');
+  charts['chartPagoIng'] = new Chart(document.getElementById('chartPagoIng'), {
+    type: 'bar',
+    data: {
+      labels: pagoIngKeys.map(k => PAGO[k]||k),
+      datasets: [{
+        label: 'Ingresos S/',
+        data: pagoIngKeys.map(k => pagoIngTotals[k]),
+        backgroundColor: pagoIngKeys.map(k => pagoColors[k]||'#95A5A6'),
+        borderColor: pagoIngKeys.map(k => pagoColors[k]||'#95A5A6'),
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      ...COPTS,
+      indexAxis: 'y',
+      plugins: {
+        ...COPTS.plugins,
+        legend: {display:false},
+        tooltip: { callbacks: { label: ctx => fmt(ctx.raw) + ' (' + (tiI>0?(ctx.raw/tiI*100).toFixed(1):0)+'%)' } }
+      },
+      scales: {
+        x: { ticks:{color:tc,callback:v=>'S/'+v}, grid:{color:gc} },
+        y: { ticks:{color:tc,font:{size:11}}, grid:{color:'transparent'} }
+      }
+    }
+  });
+
+  // ---- MÉTODOS DE PAGO EGRESOS ----
+  const pagoEgTotals = groupBy(eg,'pago');
+  const pagoEgKeys = Object.keys(pagoEgTotals).sort((a,b)=>pagoEgTotals[b]-pagoEgTotals[a]);
+
+  destroyChart('chartPagoEg');
+  charts['chartPagoEg'] = new Chart(document.getElementById('chartPagoEg'), {
+    type: 'bar',
+    data: {
+      labels: pagoEgKeys.map(k => PAGO[k]||k),
+      datasets: [{
+        label: 'Egresos S/',
+        data: pagoEgKeys.map(k => pagoEgTotals[k]),
+        backgroundColor: pagoEgKeys.map(k => pagoColors[k]||'#95A5A6'),
+        borderColor: pagoEgKeys.map(k => pagoColors[k]||'#95A5A6'),
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      ...COPTS,
+      indexAxis: 'y',
+      plugins: {
+        ...COPTS.plugins,
+        legend: {display:false},
+        tooltip: { callbacks: { label: ctx => fmt(ctx.raw) + ' (' + (tiE>0?(ctx.raw/tiE*100).toFixed(1):0)+'%)' } }
+      },
+      scales: {
+        x: { ticks:{color:tc,callback:v=>'S/'+v}, grid:{color:gc} },
+        y: { ticks:{color:tc,font:{size:11}}, grid:{color:'transparent'} }
       }
     }
   });
