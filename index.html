@@ -284,29 +284,24 @@ window.renderAnual = function(){
 
 
 
+
 // ========== PAGO MIXTO ==========
 window.togglePagoMixto = function(){
-  const val = document.getElementById('ing_pago').value;
-  const panel = document.getElementById('pagoMixtoPanel');
-  panel.style.display = val === 'mixto' ? 'block' : 'none';
-  if(val === 'mixto') calcularMixto();
+  const val=document.getElementById('ing_pago').value;
+  const panel=document.getElementById('pagoMixtoPanel');
+  panel.style.display=val==='mixto'?'block':'none';
+  if(val==='mixto')calcularMixto();
 }
-
 window.calcularMixto = function(){
-  const m1 = parseFloat(document.getElementById('ing_monto1').value)||0;
-  const m2 = parseFloat(document.getElementById('ing_monto2').value)||0;
-  const total = m1 + m2;
-  document.getElementById('totalMixto').textContent = fmt(total);
-  const boletaTotal = boletaItems.reduce((s, item)=>{
-    const el = document.getElementById(item.id+'_monto');
-    return s + (el ? parseFloat(el.value)||0 : 0);
+  const m1=parseFloat(document.getElementById('ing_monto1').value)||0;
+  const m2=parseFloat(document.getElementById('ing_monto2').value)||0;
+  document.getElementById('totalMixto').textContent=fmt(m1+m2);
+  const boletaTotal=boletaItems.reduce((s,item)=>{
+    const el=document.getElementById(item.id+'_monto');
+    return s+(el?parseFloat(el.value)||0:0);
   },0);
-  const aviso = document.getElementById('mixtoAviso');
-  if(boletaTotal > 0 && Math.abs(total - boletaTotal) > 0.01){
-    aviso.style.display = 'inline';
-  } else {
-    aviso.style.display = 'none';
-  }
+  const aviso=document.getElementById('mixtoAviso');
+  aviso.style.display=(boletaTotal>0&&Math.abs(m1+m2-boletaTotal)>0.01)?'inline':'none';
 }
 
 // ========== ALERTA SEMANAL EMAIL ==========
@@ -531,6 +526,7 @@ tr:hover td{background:rgba(212,134,10,0.05)}
 .loading-text{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--amber);letter-spacing:2px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2/dist/chartjs-plugin-datalabels.min.js"></script>
 </head>
 <body>
 
@@ -673,12 +669,12 @@ tr:hover td{background:rgba(212,134,10,0.05)}
         </div>
       </div>
 
+
       <!-- PAGO MIXTO -->
       <div id="pagoMixtoPanel" style="display:none;background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.25);border-radius:10px;padding:14px;margin-bottom:14px">
         <div style="font-family:'Bebas Neue',sans-serif;color:#3498DB;letter-spacing:1.5px;margin-bottom:10px;font-size:0.9rem">🔀 DETALLE DE PAGO MIXTO</div>
         <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;margin-bottom:10px;align-items:center">
-          <div class="form-group">
-            <label>Método 1</label>
+          <div class="form-group"><label>Método 1</label>
             <select id="ing_pago1">
               <option value="efectivo">💵 Efectivo</option>
               <option value="tarjeta">💳 Tarjeta</option>
@@ -687,14 +683,12 @@ tr:hover td{background:rgba(212,134,10,0.05)}
               <option value="transferencia">🏦 Transferencia</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>Monto S/.</label>
+          <div class="form-group"><label>Monto S/.</label>
             <input type="number" id="ing_monto1" placeholder="0.00" step="0.01" min="0" oninput="calcularMixto()">
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:center">
-          <div class="form-group">
-            <label>Método 2</label>
+          <div class="form-group"><label>Método 2</label>
             <select id="ing_pago2">
               <option value="tarjeta">💳 Tarjeta</option>
               <option value="efectivo">💵 Efectivo</option>
@@ -703,8 +697,7 @@ tr:hover td{background:rgba(212,134,10,0.05)}
               <option value="transferencia">🏦 Transferencia</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>Monto S/.</label>
+          <div class="form-group"><label>Monto S/.</label>
             <input type="number" id="ing_monto2" placeholder="0.00" step="0.01" min="0" oninput="calcularMixto()">
           </div>
         </div>
@@ -963,7 +956,7 @@ const CAT_EG = {
   servicios:'💡 Servicios',mantenimiento:'🔧 Mantenimiento',marketing:'📣 Marketing',
   impuestos:'📝 Impuestos',otros:'📦 Otros'
 };
-const PAGO = {efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta',yape:'📱 Yape',plin:'📱 Plin',transferencia:'🏦 Transferencia'};
+const PAGO = {efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta',yape:'📱 Yape',plin:'📱 Plin',transferencia:'🏦 Transferencia',mixto:'🔀 Mixto'};
 
 // ========== HELPERS ==========
 function fmt(n){return'S/ '+Number(n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -973,7 +966,39 @@ function getDateRange(days){const e=new Date(),s=new Date();s.setDate(s.getDate(
 function filterByRange(arr,s,e){return arr.filter(x=>{const d=new Date(x.fecha);return d>=s&&d<=e})}
 function sumMonto(arr){return arr.reduce((s,x)=>s+x.monto,0)}
 function groupByDate(arr){return arr.reduce((a,x)=>{a[x.fecha]=(a[x.fecha]||0)+x.monto;return a},{})}
-function groupBy(arr,key){return arr.reduce((a,x)=>{a[x[key]]=(a[x[key]]||0)+x.monto;return a},{})}
+function groupBy(arr,key){
+  return arr.reduce((a,x)=>{
+    if(key==='pago' && x.pago && x.pago.startsWith('mixto:')){
+      // New format: "mixto:efectivo:50.00+yape:30.00"
+      // Old format: "mixto: 💵 Efectivo S/50.00 + 💳 Tarjeta S/30.00"
+      const raw = x.pago.slice(6); // remove "mixto:"
+      const parts = raw.split('+');
+      parts.forEach(part=>{
+        const seg = part.trim().split(':');
+        if(seg.length>=2){
+          // New format
+          const pagoKey = seg[0].trim();
+          const monto = parseFloat(seg[1]);
+          if(!isNaN(monto)) a[pagoKey]=(a[pagoKey]||0)+monto;
+        } else {
+          // Old format fallback
+          const mMatch = part.match(/S\/(\d+\.?\d*)/);
+          if(!mMatch) return;
+          const monto = parseFloat(mMatch[1]);
+          const pagoMap = {'Efectivo':'efectivo','Tarjeta':'tarjeta','Yape':'yape','Plin':'plin','Transferencia':'transferencia'};
+          let pagoKey = 'otros';
+          for(const [label,k] of Object.entries(pagoMap)){
+            if(part.includes(label)){pagoKey=k;break;}
+          }
+          a[pagoKey]=(a[pagoKey]||0)+monto;
+        }
+      });
+    } else {
+      a[x[key]]=(a[x[key]]||0)+x.monto;
+    }
+    return a;
+  },{});
+}
 function getDatesArray(s,e){const d=[];const c=new Date(s);while(c<=e){d.push(c.toISOString().split('T')[0]);c.setDate(c.getDate()+1)}return d}
 
 // ========== AUTH ==========
@@ -1132,16 +1157,14 @@ window.registrarIngreso = async function(){
   const pagoVal=document.getElementById('ing_pago').value;
   const desc=document.getElementById('ing_desc').value.trim();
   const comprobante=document.getElementById('ing_comprobante').value.trim();
-
-  // Pago mixto
   let pagoFinal = pagoVal;
   if(pagoVal === 'mixto'){
-    const p1 = document.getElementById('ing_pago1').value;
-    const p2 = document.getElementById('ing_pago2').value;
-    const m1 = parseFloat(document.getElementById('ing_monto1').value)||0;
-    const m2 = parseFloat(document.getElementById('ing_monto2').value)||0;
+    const p1=document.getElementById('ing_pago1').value;
+    const p2=document.getElementById('ing_pago2').value;
+    const m1=parseFloat(document.getElementById('ing_monto1').value)||0;
+    const m2=parseFloat(document.getElementById('ing_monto2').value)||0;
     if(m1<=0||m2<=0){showAlert('alertIngreso','error','⚠️ Completa los montos del pago mixto');return}
-    pagoFinal = `mixto: ${PAGO[p1]||p1} S/${m1.toFixed(2)} + ${PAGO[p2]||p2} S/${m2.toFixed(2)}`;
+    pagoFinal=`mixto:${p1}:${m1.toFixed(2)}+${p2}:${m2.toFixed(2)}`;
   }
   const pago = pagoFinal;
 
@@ -1221,7 +1244,8 @@ function showAlert(id,type,msg){
 // ========== CHARTS ==========
 const charts={};
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
-const COPTS={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(253,243,227,0.7)',font:{size:11}}}}};
+if(window.ChartDataLabels) Chart.register(ChartDataLabels);
+const COPTS={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'rgba(253,243,227,0.7)',font:{size:11}}},datalabels:{display:false}}};
 const gc='rgba(212,134,10,0.1)',tc='rgba(253,243,227,0.4)';
 function lineScales(){return{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10},callback:v=>'S/'+v},grid:{color:gc}}}}
 
@@ -1391,7 +1415,14 @@ window.renderReportes = function(){
       },
       options:{...COPTS,indexAxis:'y',
         plugins:{...COPTS.plugins,legend:{display:false},
-          tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)+' ('+(tiI>0?(ctx.raw/tiI*100).toFixed(1):0)+'%)'}}},
+          tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)+' ('+(tiI>0?(ctx.raw/tiI*100).toFixed(1):0)+'%)'}},
+          datalabels:{
+            anchor:'end',align:'end',
+            color:'rgba(253,243,227,0.85)',
+            font:{weight:'bold',size:11},
+            formatter:(val)=>'S/'+Number(val).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})
+          }
+        },
         scales:{x:{ticks:{color:tc,callback:v=>'S/'+v},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:'transparent'}}}
       }
     });
@@ -1415,7 +1446,14 @@ window.renderReportes = function(){
       },
       options:{...COPTS,indexAxis:'y',
         plugins:{...COPTS.plugins,legend:{display:false},
-          tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)+' ('+(tiE>0?(ctx.raw/tiE*100).toFixed(1):0)+'%)'}}},
+          tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)+' ('+(tiE>0?(ctx.raw/tiE*100).toFixed(1):0)+'%)'}},
+          datalabels:{
+            anchor:'end',align:'end',
+            color:'rgba(253,243,227,0.85)',
+            font:{weight:'bold',size:11},
+            formatter:(val)=>'S/'+Number(val).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})
+          }
+        },
         scales:{x:{ticks:{color:tc,callback:v=>'S/'+v},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:'transparent'}}}
       }
     });
@@ -1762,13 +1800,6 @@ window.renderAnual = function(){
 
 
 
-// ========== PAGO MIXTO ==========
-window.togglePagoMixto = function(){
-  const val = document.getElementById('ing_pago').value;
-  const panel = document.getElementById('pagoMixtoPanel');
-  panel.style.display = val === 'mixto' ? 'block' : 'none';
-  if(val === 'mixto') calcularMixto();
-}
 
 window.calcularMixto = function(){
   const m1 = parseFloat(document.getElementById('ing_monto1').value)||0;
@@ -1785,6 +1816,25 @@ window.calcularMixto = function(){
   } else {
     aviso.style.display = 'none';
   }
+}
+
+// ========== PAGO MIXTO ==========
+window.togglePagoMixto = function(){
+  const val=document.getElementById('ing_pago').value;
+  const panel=document.getElementById('pagoMixtoPanel');
+  panel.style.display=val==='mixto'?'block':'none';
+  if(val==='mixto')calcularMixto();
+}
+window.calcularMixto = function(){
+  const m1=parseFloat(document.getElementById('ing_monto1').value)||0;
+  const m2=parseFloat(document.getElementById('ing_monto2').value)||0;
+  document.getElementById('totalMixto').textContent=fmt(m1+m2);
+  const boletaTotal=boletaItems.reduce((s,item)=>{
+    const el=document.getElementById(item.id+'_monto');
+    return s+(el?parseFloat(el.value)||0:0);
+  },0);
+  const aviso=document.getElementById('mixtoAviso');
+  aviso.style.display=(boletaTotal>0&&Math.abs(m1+m2-boletaTotal)>0.01)?'inline':'none';
 }
 
 // ========== ALERTA SEMANAL EMAIL ==========
