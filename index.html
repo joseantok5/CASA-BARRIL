@@ -779,6 +779,17 @@ tr:hover td{background:rgba(212,134,10,0.05)}
         <div class="form-group"><label>Tipo</label>
           <select id="filtro_tipo"><option value="todos">Todos</option><option value="ingreso">Solo Ingresos</option><option value="egreso">Solo Egresos</option></select>
         </div>
+        <div class="form-group"><label>Método de Pago</label>
+          <select id="filtro_pago">
+            <option value="todos">Todos los métodos</option>
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="yape">📱 Yape</option>
+            <option value="plin">📱 Plin</option>
+            <option value="transferencia">🏦 Transferencia</option>
+            <option value="mixto">🔀 Pago Mixto</option>
+          </select>
+        </div>
         <div class="form-group"><label>Búsqueda</label><input type="text" id="filtro_busca" placeholder="Categoría, descripción…"></div>
         <button class="btn btn-primary btn-sm" onclick="renderHistorial()">🔍 Filtrar</button>
         <button class="btn btn-sm" style="background:rgba(255,255,255,0.07);border:1px solid var(--border);color:var(--cream)" onclick="limpiarFiltros()">✖ Limpiar</button>
@@ -803,15 +814,50 @@ tr:hover td{background:rgba(212,134,10,0.05)}
   <div class="section" id="section-reportes">
     <div class="section-title">📈 Reportes y Análisis</div>
     <div class="card mb-4">
-      <div class="filter-bar">
+      <div class="filter-bar" style="align-items:flex-end;flex-wrap:wrap;gap:12px">
         <div class="form-group"><label>Período</label>
-          <select id="rep_periodo" onchange="renderReportes()">
+          <select id="rep_periodo" onchange="cambiarPeriodo()">
             <option value="7">Últimos 7 días</option>
             <option value="30" selected>Últimos 30 días</option>
             <option value="90">Últimos 90 días</option>
             <option value="mes">Este mes</option>
+            <option value="mes_especifico">📅 Mes específico</option>
+            <option value="rango">📆 Rango de fechas</option>
           </select>
         </div>
+        <!-- Mes específico -->
+        <div class="form-group" id="panel_mes" style="display:none">
+          <label>Seleccionar Mes</label>
+          <select id="rep_mes" onchange="renderReportes()">
+            <option value="0">Enero</option>
+            <option value="1">Febrero</option>
+            <option value="2">Marzo</option>
+            <option value="3">Abril</option>
+            <option value="4">Mayo</option>
+            <option value="5">Junio</option>
+            <option value="6">Julio</option>
+            <option value="7">Agosto</option>
+            <option value="8">Septiembre</option>
+            <option value="9">Octubre</option>
+            <option value="10">Noviembre</option>
+            <option value="11">Diciembre</option>
+          </select>
+        </div>
+        <div class="form-group" id="panel_mes_anio" style="display:none">
+          <label>Año</label>
+          <select id="rep_mes_anio" onchange="renderReportes()">
+          </select>
+        </div>
+        <!-- Rango de fechas -->
+        <div class="form-group" id="panel_desde" style="display:none">
+          <label>Desde</label>
+          <input type="date" id="rep_desde">
+        </div>
+        <div class="form-group" id="panel_hasta" style="display:none">
+          <label>Hasta</label>
+          <input type="date" id="rep_hasta">
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn_rep_filtrar" style="display:none" onclick="renderReportes()">🔍 Ver Reporte</button>
       </div>
     </div>
     <div class="kpi-grid" id="kpiReportes"></div>
@@ -1333,6 +1379,11 @@ window.renderHistorial = function(){
   if(tipo!=='ingreso')egresos.forEach(x=>rows.push({...x,_tipo:'egreso',_col:'egresos'}));
   if(desde)rows=rows.filter(x=>x.fecha>=desde);
   if(hasta)rows=rows.filter(x=>x.fecha<=hasta);
+  const filtro_pago = document.getElementById('filtro_pago').value;
+  if(filtro_pago !== 'todos') rows = rows.filter(x => {
+    if(filtro_pago === 'mixto') return x.pago && x.pago.startsWith('mixto');
+    return x.pago === filtro_pago;
+  });
   if(busca)rows=rows.filter(x=>{
     const c=(x._tipo==='ingreso'?CAT_ING[x.cat]:CAT_EG[x.cat])||x.cat;
     return c.toLowerCase().includes(busca)||(x.desc||'').toLowerCase().includes(busca);
@@ -1354,6 +1405,7 @@ window.renderHistorial = function(){
 window.limpiarFiltros = function(){
   ['filtro_desde','filtro_hasta','filtro_busca'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('filtro_tipo').value='todos';
+  document.getElementById('filtro_pago').value='todos';
   renderHistorial();
 }
 
@@ -1368,11 +1420,44 @@ window.exportarCSV = function(){
 }
 
 // ========== REPORTES ==========
+window.cambiarPeriodo = function(){
+  const per = document.getElementById('rep_periodo').value;
+  document.getElementById('panel_mes').style.display = per==='mes_especifico'?'block':'none';
+  document.getElementById('panel_mes_anio').style.display = per==='mes_especifico'?'block':'none';
+  document.getElementById('panel_desde').style.display = per==='rango'?'block':'none';
+  document.getElementById('panel_hasta').style.display = per==='rango'?'block':'none';
+  document.getElementById('btn_rep_filtrar').style.display = per==='rango'?'block':'none';
+  // Populate year selector for month picker
+  if(per==='mes_especifico'){
+    const anioSel = document.getElementById('rep_mes_anio');
+    const anios = new Set([...ingresos,...egresos].map(x=>x.fecha&&x.fecha.slice(0,4)).filter(Boolean));
+    anios.add(String(new Date().getFullYear()));
+    anioSel.innerHTML = [...anios].sort((a,b)=>b-a).map(a=>`<option value="${a}">${a}</option>`).join('');
+    // Set current month
+    document.getElementById('rep_mes').value = new Date().getMonth();
+  }
+  if(per!=='rango') renderReportes();
+}
+
 window.renderReportes = function(){
   const per=document.getElementById('rep_periodo').value;
   let start,end=new Date();
-  if(per==='mes'){const{start:ms}=getMonthRange();start=ms;}
-  else{const{start:rs}=getDateRange(parseInt(per));start=rs;}
+  if(per==='mes'){
+    const{start:ms}=getMonthRange();start=ms;
+  } else if(per==='mes_especifico'){
+    const mes=parseInt(document.getElementById('rep_mes').value);
+    const anio=parseInt(document.getElementById('rep_mes_anio').value||new Date().getFullYear());
+    start=new Date(anio,mes,1);
+    end=new Date(anio,mes+1,0,23,59,59);
+  } else if(per==='rango'){
+    const desde=document.getElementById('rep_desde').value;
+    const hasta=document.getElementById('rep_hasta').value;
+    if(!desde||!hasta){return;}
+    start=new Date(desde);
+    end=new Date(hasta+'T23:59:59');
+  } else {
+    const{start:rs}=getDateRange(parseInt(per));start=rs;
+  }
   const ing=filterByRange(ingresos,start,end);
   const eg=filterByRange(egresos,start,end);
   const tiI=sumMonto(ing),tiE=sumMonto(eg),gan=tiI-tiE;
