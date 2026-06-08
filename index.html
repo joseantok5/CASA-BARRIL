@@ -1015,36 +1015,61 @@ function sumMonto(arr){return arr.reduce((s,x)=>s+x.monto,0)}
 function groupByDate(arr){return arr.reduce((a,x)=>{a[x.fecha]=(a[x.fecha]||0)+x.monto;return a},{})}
 function groupBy(arr,key){
   return arr.reduce((a,x)=>{
-    if(key==='pago' && x.pago && x.pago.startsWith('mixto:')){
-      // New format: "mixto:efectivo:50.00+yape:30.00"
-      // Old format: "mixto: 💵 Efectivo S/50.00 + 💳 Tarjeta S/30.00"
-      const raw = x.pago.slice(6); // remove "mixto:"
-      const parts = raw.split('+');
-      parts.forEach(part=>{
-        const seg = part.trim().split(':');
-        if(seg.length>=2){
-          // New format
-          const pagoKey = seg[0].trim();
-          const monto = parseFloat(seg[1]);
-          if(!isNaN(monto)) a[pagoKey]=(a[pagoKey]||0)+monto;
-        } else {
-          // Old format fallback
-          const mMatch = part.match(/S\/(\d+\.?\d*)/);
-          if(!mMatch) return;
-          const monto = parseFloat(mMatch[1]);
-          const pagoMap = {'Efectivo':'efectivo','Tarjeta':'tarjeta','Yape':'yape','Plin':'plin','Transferencia':'transferencia'};
-          let pagoKey = 'otros';
-          for(const [label,k] of Object.entries(pagoMap)){
-            if(part.includes(label)){pagoKey=k;break;}
-          }
-          a[pagoKey]=(a[pagoKey]||0)+monto;
-        }
-      });
-    } else {
+    if(key!=='pago' || !x.pago || !x.pago.startsWith('mixto:')){
+      // Pago normal — suma directamente
       a[x[key]]=(a[x[key]]||0)+x.monto;
     }
+    // Pagos mixtos se ignoran aqui — se manejan en groupByPago
     return a;
   },{});
+}
+
+// Agrupa ingresos por método de pago correctamente
+// Para pagos mixtos: cuenta el monto mixto UNA sola vez por boleta (comprobante)
+function groupByPago(arr){
+  const result = {};
+  // Separar registros normales de mixtos
+  const normales = arr.filter(x => !x.pago || !x.pago.startsWith('mixto:'));
+  const mixtos   = arr.filter(x => x.pago && x.pago.startsWith('mixto:'));
+
+  // Sumar normales directamente
+  normales.forEach(x=>{
+    result[x.pago]=(result[x.pago]||0)+x.monto;
+  });
+
+  // Para mixtos: agrupar por comprobante y procesar UNA sola vez por boleta
+  const boletasProcesadas = new Set();
+  mixtos.forEach(x=>{
+    const key = x.comprobante || (x.fecha+'_'+x.pago); // identificador único de boleta
+    if(boletasProcesadas.has(key)) return; // ya procesamos esta boleta
+    boletasProcesadas.add(key);
+
+    // Parsear el pago mixto: "mixto:efectivo:163.00+tarjeta:50.00"
+    const raw = x.pago.slice(6);
+    const parts = raw.split('+');
+    parts.forEach(part=>{
+      const seg = part.trim().split(':');
+      if(seg.length>=2){
+        // Nuevo formato: efectivo:163.00
+        const pagoKey = seg[0].trim();
+        const monto = parseFloat(seg[1]);
+        if(!isNaN(monto)) result[pagoKey]=(result[pagoKey]||0)+monto;
+      } else {
+        // Formato viejo: "💵 Efectivo S/163.00"
+        const mMatch = part.match(/S\/(\d+\.?\d*)/);
+        if(!mMatch) return;
+        const monto = parseFloat(mMatch[1]);
+        const pagoMap = {'Efectivo':'efectivo','Tarjeta':'tarjeta','Yape':'yape','Plin':'plin','Transferencia':'transferencia'};
+        let pagoKey = 'otros';
+        for(const [label,k] of Object.entries(pagoMap)){
+          if(part.includes(label)){pagoKey=k;break;}
+        }
+        result[pagoKey]=(result[pagoKey]||0)+monto;
+      }
+    });
+  });
+
+  return result;
 }
 function getDatesArray(s,e){const d=[];const c=new Date(s);while(c<=e){d.push(c.toISOString().split('T')[0]);c.setDate(c.getDate()+1)}return d}
 
@@ -1333,7 +1358,7 @@ function renderDashboard(){
   destroyChart('chartDoughnut');
   charts['chartDoughnut']=new Chart(document.getElementById('chartDoughnut'),{type:'doughnut',data:{labels:ck.map(k=>CAT_ING[k]||k),datasets:[{data:ck.map(k=>ct[k]),backgroundColor:dc.slice(0,ck.length),borderWidth:2,borderColor:'#000000'}]},options:{...COPTS,cutout:'60%'}});
   // Pagos pie
-  const pt=groupBy(ing_m,'pago');const pk=Object.keys(pt);
+  const pt=groupByPago(ing_m);const pk=Object.keys(pt);
   const pc={efectivo:'#F1C40F',tarjeta:'#3498DB',yape:'#2ECC71',plin:'#1ABC9C',transferencia:'#9B59B6'};
   destroyChart('chartPagos');
   charts['chartPagos']=new Chart(document.getElementById('chartPagos'),{type:'pie',data:{labels:pk.map(k=>PAGO[k]||k),datasets:[{data:pk.map(k=>pt[k]),backgroundColor:pk.map(k=>pc[k]||'#95A5A6'),borderWidth:2,borderColor:'#000000'}]},options:{...COPTS}});
@@ -1479,13 +1504,13 @@ window.renderReportes = function(){
   charts['chartGanancias']=new Chart(document.getElementById('chartGanancias'),{type:'line',data:{labels:dates.map(d=>d.slice(5)),datasets:[{label:'Ganancia Acum.',data:cumD,borderColor:cumD[cumD.length-1]>=0?'#2ECC71':'#E74C3C',backgroundColor:cumD[cumD.length-1]>=0?'rgba(46,204,113,0.1)':'rgba(231,76,60,0.1)',fill:true,tension:0.4,pointRadius:2}]},options:{...COPTS,scales:lineScales()}});
   destroyChart('chartIngDiario');
   charts['chartIngDiario']=new Chart(document.getElementById('chartIngDiario'),{type:'bar',data:{labels:dates.map(d=>d.slice(5)),datasets:[{label:'Ingresos',data:dates.map(d=>im[d]||0),backgroundColor:'rgba(245,166,35,0.6)',borderColor:'#F5A623',borderWidth:1,borderRadius:3},{label:'Egresos',data:dates.map(d=>em[d]||0),backgroundColor:'rgba(231,76,60,0.5)',borderColor:'#E74C3C',borderWidth:1,borderRadius:3}]},options:{...COPTS,scales:lineScales()}});
-  const pm=groupBy(ing,'pago');const pc={efectivo:'#F1C40F',tarjeta:'#3498DB',yape:'#2ECC71',plin:'#1ABC9C',transferencia:'#9B59B6'};
+  const pm=groupByPago(ing);const pc={efectivo:'#F1C40F',tarjeta:'#3498DB',yape:'#2ECC71',plin:'#1ABC9C',transferencia:'#9B59B6'};
   document.getElementById('mixPagos').innerHTML=Object.entries(pm).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="prog-wrap"><div class="prog-label"><span>${PAGO[k]||k}</span><span>${fmt(v)} (${tiI>0?(v/tiI*100).toFixed(1):0}%)</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiI>0?Math.min(100,v/tiI*100):0}%;background:${pc[k]||'#95A5A6'}"></div></div></div>`).join('')||'<div class="empty"><div class="empty-icon">💳</div>Sin datos</div>';
   const cI=groupBy(ing,'cat');document.getElementById('topCatIng').innerHTML=Object.entries(cI).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v],i)=>`<div class="prog-wrap"><div class="prog-label"><span>${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${CAT_ING[k]||k}</span><span>${fmt(v)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiI>0?Math.min(100,v/tiI*100):0}%;background:linear-gradient(90deg,#D4860A,#F5A623)"></div></div></div>`).join('')||'<div class="empty"><div class="empty-icon">🍺</div>Sin datos</div>';
   const cE=groupBy(eg,'cat');document.getElementById('topCatEg').innerHTML=Object.entries(cE).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v],i)=>`<div class="prog-wrap"><div class="prog-label"><span>${['🔴','🟠','🟡','⚪','⚫'][i]} ${CAT_EG[k]||k}</span><span>${fmt(v)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${tiE>0?Math.min(100,v/tiE*100):0}%;background:linear-gradient(90deg,#C0392B,#E74C3C)"></div></div></div>`).join('')||'<div class="empty"><div class="empty-icon">📤</div>Sin datos</div>';
   // ---- MÉTODOS DE PAGO INGRESOS ----
   const pagoColors2 = {efectivo:'#F1C40F',tarjeta:'#3498DB',yape:'#2ECC71',plin:'#1ABC9C',transferencia:'#9B59B6',mixto:'#E67E22'};
-  const pagoIngTotals = groupBy(ing,'pago');
+  const pagoIngTotals = groupByPago(ing);
   const pagoIngKeys = Object.keys(pagoIngTotals).sort((a,b)=>pagoIngTotals[b]-pagoIngTotals[a]);
   destroyChart('chartPagoIng');
   if(document.getElementById('chartPagoIng')){
@@ -1516,7 +1541,7 @@ window.renderReportes = function(){
   }
 
   // ---- MÉTODOS DE PAGO EGRESOS ----
-  const pagoEgTotals = groupBy(eg,'pago');
+  const pagoEgTotals = groupByPago(eg);
   const pagoEgKeys = Object.keys(pagoEgTotals).sort((a,b)=>pagoEgTotals[b]-pagoEgTotals[a]);
   destroyChart('chartPagoEg');
   if(document.getElementById('chartPagoEg')){
