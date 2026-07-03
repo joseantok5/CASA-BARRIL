@@ -1024,48 +1024,67 @@ function groupBy(arr,key){
   },{});
 }
 
-// Agrupa ingresos por método de pago correctamente
-// Para pagos mixtos: cuenta el monto mixto UNA sola vez por boleta (comprobante)
+// Agrupa por método de pago correctamente manejando pagos mixtos
+// Para mixtos: distribuye los montos UNA sola vez por boleta (por comprobante+fecha+pago)
+function parseMixto(pagoStr){
+  // Formato: "mixto:efectivo:163.00+tarjeta:50.00"
+  const raw = pagoStr.slice(6); // quita "mixto:"
+  const parts = raw.split('+');
+  const dist = {};
+  parts.forEach(part=>{
+    const seg = part.trim().split(':');
+    if(seg.length>=2){
+      const pagoKey = seg[0].trim();
+      const monto = parseFloat(seg[1]);
+      if(pagoKey && !isNaN(monto)) dist[pagoKey]=(dist[pagoKey]||0)+monto;
+    } else {
+      // Formato viejo con emojis
+      const mMatch = part.match(/S\/(\d+\.?\d*)/);
+      if(!mMatch) return;
+      const monto = parseFloat(mMatch[1]);
+      const pagoMap = {'Efectivo':'efectivo','Tarjeta':'tarjeta','Yape':'yape','Plin':'plin','Transferencia':'transferencia'};
+      let pagoKey = 'otros';
+      for(const [label,k] of Object.entries(pagoMap)){
+        if(part.includes(label)){pagoKey=k;break;}
+      }
+      dist[pagoKey]=(dist[pagoKey]||0)+monto;
+    }
+  });
+  return dist;
+}
+
 function groupByPago(arr){
   const result = {};
-  // Separar registros normales de mixtos
+
+  // Separar normales de mixtos
   const normales = arr.filter(x => !x.pago || !x.pago.startsWith('mixto:'));
   const mixtos   = arr.filter(x => x.pago && x.pago.startsWith('mixto:'));
 
   // Sumar normales directamente
   normales.forEach(x=>{
-    result[x.pago]=(result[x.pago]||0)+x.monto;
+    if(x.pago) result[x.pago]=(result[x.pago]||0)+x.monto;
   });
 
-  // Para mixtos: agrupar por comprobante y procesar UNA sola vez por boleta
-  const boletasProcesadas = new Set();
+  // Para mixtos: agrupar boletas únicas por comprobante+fecha+pagoStr
+  // Así evitamos contar la misma boleta múltiples veces (una por cada producto)
+  const boletasVistas = new Map(); // key → distribución de pago ya calculada
   mixtos.forEach(x=>{
-    const key = x.comprobante || (x.fecha+'_'+x.pago); // identificador único de boleta
-    if(boletasProcesadas.has(key)) return; // ya procesamos esta boleta
-    boletasProcesadas.add(key);
+    // Clave única por boleta: comprobante tiene prioridad, si no usa fecha+ts
+    const bKey = (x.comprobante && x.comprobante.trim())
+      ? (x.fecha+'|'+x.comprobante.trim())
+      : (x.fecha+'|'+x.ts+'|'+x.pago);
 
-    // Parsear el pago mixto: "mixto:efectivo:163.00+tarjeta:50.00"
-    const raw = x.pago.slice(6);
-    const parts = raw.split('+');
-    parts.forEach(part=>{
-      const seg = part.trim().split(':');
-      if(seg.length>=2){
-        // Nuevo formato: efectivo:163.00
-        const pagoKey = seg[0].trim();
-        const monto = parseFloat(seg[1]);
-        if(!isNaN(monto)) result[pagoKey]=(result[pagoKey]||0)+monto;
-      } else {
-        // Formato viejo: "💵 Efectivo S/163.00"
-        const mMatch = part.match(/S\/(\d+\.?\d*)/);
-        if(!mMatch) return;
-        const monto = parseFloat(mMatch[1]);
-        const pagoMap = {'Efectivo':'efectivo','Tarjeta':'tarjeta','Yape':'yape','Plin':'plin','Transferencia':'transferencia'};
-        let pagoKey = 'otros';
-        for(const [label,k] of Object.entries(pagoMap)){
-          if(part.includes(label)){pagoKey=k;break;}
-        }
-        result[pagoKey]=(result[pagoKey]||0)+monto;
-      }
+    if(!boletasVistas.has(bKey)){
+      // Primera vez que vemos esta boleta → parsear el mixto
+      boletasVistas.set(bKey, parseMixto(x.pago));
+    }
+    // No hacer nada para los demás productos de la misma boleta
+  });
+
+  // Sumar las distribuciones de cada boleta única
+  boletasVistas.forEach(dist=>{
+    Object.entries(dist).forEach(([k,v])=>{
+      result[k]=(result[k]||0)+v;
     });
   });
 
